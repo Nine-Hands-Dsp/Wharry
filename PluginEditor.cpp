@@ -1,5 +1,6 @@
 #include "PluginEditor.h"
 #include <BinaryData.h>
+#include "WigaWindowSize.h"
 
 using namespace juce;
 
@@ -317,21 +318,34 @@ namespace
     };
 
     //==========================================================================
-    // menu de taille de fenêtre (identique à Ring Think)
-    bool isDefaultSize (const WharryEditor* ed) { return ed != nullptr && std::abs ((float) ed->getHeight() / kRefH - kDefaultScale) < 0.02f; }
+    // menu de taille de fenêtre (identique à Ring Think) + taille par défaut des nouvelles fenêtres (comme Octopus)
+    // indices 0 = 60 % (taille par défaut d'origine), 1 = 75 %, 2 = 100 %
+    constexpr int kNumSizes = 3;
 
     void addSizeItems (PopupMenu& m, const WharryEditor* ed)
     {
+        const char* names[kNumSizes] = { "60 %", "75 %", "100 %" };
         const int cur = ed != nullptr ? ed->getScaleIndex() : -1;
-        m.addItem (904, "60 % (default)", true, isDefaultSize (ed));
-        m.addItem (902, "75 %", true, cur == 1);
-        m.addItem (903, "100 %", true, cur == 2);
+        const int def = WigaWindowSize::defaultIndex (JucePlugin_Name, kNumSizes);
+        PopupMenu defSizes;
+        for (int i = 0; i < kNumSizes; ++i)
+        {
+            m.addItem (902 + i, String (names[i]) + (i == def ? "  (default)" : ""), true, cur == i);
+            defSizes.addItem (920 + i, names[i], true, i == def);
+        }
+        m.addSeparator();
+        m.addSubMenu ("Default size (new windows)", defSizes);
     }
 
     void handleSizeChoice (int r, WharryEditor* ed)
     {
-        if (ed == nullptr || r < 902 || r > 904) return;
-        ed->setScaleIndex (r == 904 ? -1 : r - 901);
+        if (ed == nullptr) return;
+        if (r >= 902 && r < 902 + kNumSizes) ed->setScaleIndex (r - 902);
+        else if (r >= 920 && r < 920 + kNumSizes)
+        {
+            WigaWindowSize::setDefaultIndex (JucePlugin_Name, r - 920);   // toutes les nouvelles fenêtres de ce plugin
+            ed->setScaleIndex (r - 920);                                   // et cette fenêtre tout de suite
+        }
     }
 
 }
@@ -928,7 +942,10 @@ WharryEditor::WharryEditor (WharryProcessor& p) : AudioProcessorEditor (&p), pro
     setResizeLimits ((int) std::lround ((double) minH * kW / kH), minH, (int) std::lround ((double) maxH * kW / kH), maxH);
     getConstrainer()->setFixedAspectRatio ((double) kW / (double) kH);
     setOpaque (true);                    // anti-gel : l'hôte ne redessine jamais ce qui est derrière la fenêtre
-    setScaleIndex (jlimit (-1, 2, proc.uiScaleIdx.load()));
+    // taille sauvegardée avec le projet pour cette instance si elle existe, sinon taille choisie dans « Default size (new windows) »
+    const int saved = jlimit (-1, 2, proc.uiScaleIdx.load());
+    if (saved >= 0) setScaleIndex (saved);
+    else            applyScale (WigaWindowSize::defaultIndex (JucePlugin_Name, kNumSizes));
     view->initCaches();
 }
 
@@ -988,16 +1005,20 @@ void WharryEditor::resized()
 int WharryEditor::getScaleIndex() const
 {
     const float sc = (float) getHeight() / kRefH;
-    for (int i = 1; i < 3; ++i) if (std::abs (sc - kScales[i]) < 0.02f) return i;
+    for (int i = 0; i < kNumSizes; ++i) if (std::abs (sc - kScales[i]) < 0.02f) return i;
     return -1;
 }
 
 void WharryEditor::setScaleIndex (int idx)
 {
-    idx = jlimit (-1, 2, idx);
-    if (idx == 0) idx = -1;
-    proc.uiScaleIdx = idx;
-    const float sc = idx < 0 ? kDefaultScale : kScales[idx];
-    const int h = (int) std::lround (kRefH * sc);
+    idx = jlimit (0, kNumSizes - 1, idx);
+    proc.uiScaleIdx = idx;               // taille choisie pour cette instance (sauvegardée avec le projet)
+    applyScale (idx);
+}
+
+void WharryEditor::applyScale (int idx)
+{
+    const float sc = kScales[jlimit (0, kNumSizes - 1, idx)];
+    const int h = jmax ((int) std::lround (kRefH * kDefaultScale), (int) std::lround (kRefH * sc));
     setSize ((int) std::lround ((double) h * kW / kH), h);
 }

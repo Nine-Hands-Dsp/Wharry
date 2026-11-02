@@ -12,8 +12,9 @@ public:
     void resized() override;
     void parentHierarchyChanged() override;
     void visibilityChanged() override;
-    int  getScaleIndex() const;          // 1, 2 = 75 %, 100 %  (-1 = taille par défaut / libre)
-    void setScaleIndex (int idx);        // -1 = taille par défaut (67 %, aussi la taille minimale)
+    int  getScaleIndex() const;          // 0, 1, 2 = 60 % (défaut d'origine), 75 %, 100 %  (-1 = taille libre)
+    void setScaleIndex (int idx);        // choisit la taille de cette instance (sauvegardée avec le projet)
+    void applyScale (int idx);           // redimensionne seulement (0 = 60 %, aussi la taille minimale)
 
 private:
     friend class PedalView;              // son timer surveille le moteur de rendu (anti-gel v2)
