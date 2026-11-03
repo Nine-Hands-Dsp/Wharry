@@ -5,7 +5,7 @@ au format **pédale double** (fenêtre aux hauteurs de Ring Think : 544 x 495 pa
 
 - 21 programmes : 10 Whammy, 2 Detune, 9 Harmony (ordre du sélecteur = Program Change 1 à 21)
 - **CLASSIC** (notes seules, réactif, caractère Whammy) / **CHORDS** (accords, sans latence) ; option CHORDS **Studio HQ** (vocodeur de phase, latence annoncée au DAW)
-- Pédale d'expression : paramètre automatisable + **CC 11 direct** (MIDI learn possible), lissage réglable, calibration talon/pointe, inversion
+- Pédale d'expression : paramètre automatisable, lissage réglable, calibration talon/pointe, inversion ; aucun CC assigné par défaut : clic droit > MIDI > Learn
 - Program Change façon Whammy 5 : 1-21 Classic, 22-42 Classic bypass, 43-63 Chords, 64-84 Chords bypass
 - Inverseur CLASSIC / CHORDS, footswitch ON / OFF (MIDI learn par clic droit)
 - Boutons GLIDE (lissage de la pédale), TONE (filtre de la voix traitée), MIX (dosage de l'effet)
@@ -28,3 +28,4 @@ Tests du moteur audio : `g++ -O2 -std=c++17 tests/test_dsp.cpp -o test_dsp && ./
 - v1.8.2 : menu de taille de fenêtre : « 60 % (default) », 75 %, 100 % (plus de taille en pixels)
 - v1.9.0 : MIDI Learn au clic droit sur chaque commande (Clear MIDI, assignations sauvegardées avec le projet)
 - v1.10.0 : clic droit > Plugin size > Default size (new windows) : taille par défaut des nouvelles fenêtres au choix, comme dans Octopus
+- v1.10.1 : plus aucun CC MIDI assigné par défaut (tout passe par le MIDI Learn)

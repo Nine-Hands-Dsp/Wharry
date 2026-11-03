@@ -27,12 +27,13 @@ const FactoryPreset& WharryProcessor::factory (int i)
 }
 
 // ------------------------------------------------------------------ MIDI Learn
+static constexpr int kOldFactoryPedalCC = 11;   // ancienne assignation d'usine (< 1.10.1), sert seulement a reconnaitre les anciens projets
 const WharryProcessor::LearnDef& WharryProcessor::learnDef (int i)
 {
-    // pedale d'expression : CC 11 par defaut (standard Whammy, comme avant) ; les autres commandes ne sont pas assignees
+    // aucune commande assignee par defaut (v1.10.1) : tout passe par le MIDI Learn
     static const LearnDef defs[numLearn] =
     {
-        { "pedal",  "Expression pedal",        11, learnContinuous, 0 },
+        { "pedal",  "Expression pedal",        -1, learnContinuous, 0 },
         { "program","Program selector",        -1, learnSelector,   wharry::kNumPrograms },
         { "smooth", "Glide",                   -1, learnContinuous, 0 },
         { "tone",   "Tone",                    -1, learnContinuous, 0 },
@@ -305,8 +306,7 @@ void WharryProcessor::handleMidiMessage (const MidiMessage& m)
 
 void WharryProcessor::clearMidi (MidiTarget t)
 {
-    if (t == MidiTarget::Pedal) { ccMap[lPedal] = 11; if (learnTarget.load() == lPedal) learnTarget = -1; }   // « Reset to CC 11 »
-    else clearLearn (learnIndexOf (t));
+    clearLearn (learnIndexOf (t));
 }
 
 String WharryProcessor::getMidiDescription (MidiTarget t) const
@@ -459,7 +459,7 @@ void WharryProcessor::setStateInformation (const void* data, int size)
             learnTarget = -1;
             for (int i = 0; i < numLearn; ++i)
             {
-                const var legacy = i == lPedal  ? st.getProperty ("ccPedal", 11)
+                const var legacy = i == lPedal  ? st.getProperty ("ccPedal", kOldFactoryPedalCC)
                                  : i == lChords ? st.getProperty ("ccLeft", -1)
                                  : i == lFs     ? st.getProperty ("ccRight", -1)
                                                 : var (learnDef (i).defaultCC);
@@ -467,6 +467,14 @@ void WharryProcessor::setStateInformation (const void* data, int size)
             }
             noteLeft  = (int) st.getProperty ("noteLeft", -1);
             noteRight = (int) st.getProperty ("noteRight", -1);
+            // anciens projets (< 1.10.1) : table d'usine jamais modifiee (pedale CC 11, le reste vide) -> plus aucune assignation
+            {
+                bool untouched = noteLeft.load() < 0 && noteRight.load() < 0;
+                for (int i = 0; i < numLearn && untouched; ++i)
+                    untouched = ccMap[i].load() == (i == lPedal ? kOldFactoryPedalCC : -1);
+                if (untouched)
+                    for (int i = 0; i < numLearn; ++i) ccMap[i].store (-1);
+            }
             uiScaleIdx = jlimit (-1, 2, (int) st.getProperty ("uiScaleIdx", -1));
             currentFactory = jlimit (0, kNumFactory - 1, (int) st.getProperty ("factory", 0));
             autoMin = (float) (double) st.getProperty ("autoMin", 1.0);

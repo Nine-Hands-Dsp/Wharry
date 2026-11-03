@@ -838,7 +838,7 @@ private:
                           true, proc.learnTarget.load() == i);
         midi.addSeparator();
         if (proc.learnTarget.load() >= 0) midi.addItem (1200, "Cancel MIDI learn");
-        midi.addItem (1201, "Reset MIDI to defaults (pedal CC 11, others none)");
+        midi.addItem (1201, "Clear all MIDI assignments");
         midi.addSeparator();
         midi.addItem (1202, "CLASSIC / CHORDS and footswitch also learn a MIDI note", false);
         m.addSubMenu ("MIDI", midi);
@@ -866,7 +866,7 @@ private:
         {
             m.addSectionHeader ("Expression pedal (" + proc.getMidiDescription (MidiTarget::Pedal) + ")");
             m.addItem (31, "MIDI learn pedal controller");
-            m.addItem (32, "Reset to CC 11 (Whammy standard)");
+            m.addItem (32, "Clear pedal MIDI", proc.learnAssignText (WharryProcessor::lPedal) != "none");
             m.addItem (33, "Invert pedal direction", true, param ("invert"));
             m.addItem (35, proc.isCalibrating() ? "Finish pedal calibration" : "Calibrate pedal (" + proc.calibrationDescription() + ")");
             m.addItem (34, "Reset pedal calibration");
