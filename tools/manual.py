@@ -1,5 +1,8 @@
 # Wharry (Studio Wiga) - notice PDF bilingue (anglais puis français), illustrée avec le rendu réel du plugin.
 # Usage : python3 tools/manual.py <dossier des captures (tools/render)> <fichier PDF de sortie>
+#   ou   python3 tools/manual.py tools/manual_assets <fichier PDF de sortie>
+# tools/manual_assets : images de la notice v1.9.0 (rendu réel du plugin, visuel inchangé depuis) : wharry_annotated.png,
+# wharry_updown.png et wharry_cover.png (couverture déjà composée : pédale détourée, reflet, halo rouge) utilisée telle quelle.
 import os, sys
 from PIL import Image, ImageDraw, ImageFont
 from reportlab.lib.pagesizes import A4
@@ -15,8 +18,8 @@ from reportlab.pdfbase.ttfonts import TTFont
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SHOTS = sys.argv[1]
 OUT = sys.argv[2]
-VERSION = "1.9.0"
-TMP = os.path.dirname(OUT)
+VERSION = next(l.split("VERSION")[1].split()[0].strip(")") for l in open(os.path.join(ROOT, "CMakeLists.txt")) if l.startswith("project("))
+TMP = os.path.dirname(os.path.abspath(OUT))
 
 for n, f in (("Pop", "Poppins-Regular"), ("PopL", "Poppins-Light"), ("PopM", "Poppins-Medium"), ("PopB", "Poppins-Bold")):
     pdfmetrics.registerFont(TTFont(n, os.path.join(ROOT, "fonts", f + ".ttf")))
@@ -54,27 +57,32 @@ if os.path.exists(os.path.join(SHOTS, "wharry_100pc_milieu.png")):
 else:
     annotated = os.path.join(SHOTS, "wharry_annotated.png")
     updown = os.path.join(SHOTS, "wharry_updown.png")
-    cut = Image.open(os.path.join(SHOTS, "wharry_cover_cutout.png")).convert("RGBA")
-    cut = cut.crop(cut.getbbox())
-# couverture : pédale détourée sur fond noir, léger reflet au sol et halo rouge très doux qui retombe à zéro avant les bords
-cw, ch = cut.size
-pad = int(cw * 0.10)
-canvas = Image.new("RGBA", (cw + 2 * pad, int(ch * 1.30) + pad), (0, 0, 0, 255))
-yy, xx = np.mgrid[0:canvas.height, 0:canvas.width].astype(np.float64)
-gcx, gcy = canvas.width / 2, pad + ch * 0.45
-glow = np.exp(-(((xx - gcx) / (cw * 0.48)) ** 2 + ((yy - gcy) / (ch * 0.42)) ** 2)) * 38
-edge = np.clip(np.minimum.reduce([xx, canvas.width - 1 - xx, yy, canvas.height - 1 - yy]) / (pad * 0.9), 0, 1)
-glow *= edge ** 2
-halo = np.dstack([glow * 1.0, glow * 0.10, glow * 0.12, np.full_like(glow, 255)]).astype(np.uint8)
-canvas = Image.alpha_composite(canvas, Image.fromarray(halo, "RGBA"))
-refl = cut.transpose(Image.FLIP_TOP_BOTTOM)
-ra = np.array(refl).astype(np.float64)
-fade = np.clip(1 - np.arange(refl.height) / (refl.height * 0.22), 0, 1) ** 1.6 * 0.22
-ra[..., 3] *= fade[:, None]
-canvas.alpha_composite(Image.fromarray(ra.astype(np.uint8), "RGBA"), (pad, pad + ch + 6))
-canvas.alpha_composite(cut, (pad, pad))
-canvas = canvas.crop((0, 0, canvas.width, pad + int(ch * 1.20)))
-cover = os.path.join(TMP, "wharry_cover.png"); canvas.convert("RGB").save(cover)
+    cut = None
+    if os.path.exists(os.path.join(SHOTS, "wharry_cover_cutout.png")):
+        cut = Image.open(os.path.join(SHOTS, "wharry_cover_cutout.png")).convert("RGBA")
+        cut = cut.crop(cut.getbbox())
+if cut is None:     # couverture déjà composée (tools/manual_assets/wharry_cover.png)
+    cover = os.path.join(SHOTS, "wharry_cover.png")
+else:
+    # couverture : pédale détourée sur fond noir, léger reflet au sol et halo rouge très doux qui retombe à zéro avant les bords
+    cw, ch = cut.size
+    pad = int(cw * 0.10)
+    canvas = Image.new("RGBA", (cw + 2 * pad, int(ch * 1.30) + pad), (0, 0, 0, 255))
+    yy, xx = np.mgrid[0:canvas.height, 0:canvas.width].astype(np.float64)
+    gcx, gcy = canvas.width / 2, pad + ch * 0.45
+    glow = np.exp(-(((xx - gcx) / (cw * 0.48)) ** 2 + ((yy - gcy) / (ch * 0.42)) ** 2)) * 38
+    edge = np.clip(np.minimum.reduce([xx, canvas.width - 1 - xx, yy, canvas.height - 1 - yy]) / (pad * 0.9), 0, 1)
+    glow *= edge ** 2
+    halo = np.dstack([glow * 1.0, glow * 0.10, glow * 0.12, np.full_like(glow, 255)]).astype(np.uint8)
+    canvas = Image.alpha_composite(canvas, Image.fromarray(halo, "RGBA"))
+    refl = cut.transpose(Image.FLIP_TOP_BOTTOM)
+    ra = np.array(refl).astype(np.float64)
+    fade = np.clip(1 - np.arange(refl.height) / (refl.height * 0.22), 0, 1) ** 1.6 * 0.22
+    ra[..., 3] *= fade[:, None]
+    canvas.alpha_composite(Image.fromarray(ra.astype(np.uint8), "RGBA"), (pad, pad + ch + 6))
+    canvas.alpha_composite(cut, (pad, pad))
+    canvas = canvas.crop((0, 0, canvas.width, pad + int(ch * 1.20)))
+    cover = os.path.join(TMP, "wharry_cover.png"); canvas.convert("RGB").save(cover)
 
 def img(path, width):
     im = Image.open(path); h = width * im.height / im.width
@@ -137,7 +145,7 @@ T = {
  lang="ENGLISH", sub="Pitch-shift expression pedal &nbsp;·&nbsp; VST3 for Windows and macOS", ver="User manual &nbsp;·&nbsp; version " + VERSION,
  intro_t="1. Introduction",
  intro=["<b>Wharry</b> is a Studio Wiga plugin that reproduces the behaviour of the DigiTech Whammy 5 pitch-shifting pedal: a rocker pedal that bends your notes up or down, adds a moving harmony, or a subtle detuned double.",
-        "It keeps the original logic (21 programs, Classic / Chords switch, MIDI CC 11 control of the treadle, Program Change selection) and adds a few modern extras: GLIDE, TONE and MIX knobs, a live screen, a studio-quality chords engine, and a treadle that tilts on screen in real time with your MIDI expression pedal or DAW automation.",
+        "It keeps the original logic (21 programs, Classic / Chords switch, MIDI control of the treadle, Program Change selection) and adds a few modern extras: GLIDE, TONE and MIX knobs, a live screen, a studio-quality chords engine, and a treadle that tilts on screen in real time with your MIDI expression pedal or DAW automation.",
         "Sound: Classic mode has the fast, slightly gritty character of the original single-note Whammy; Chords mode keeps chords in tune while you bend them."],
  inst_t="2. Installation",
  inst=[("Windows", "Download the <b>Wharry-VST3-Windows</b> artifact from the Actions tab of the GitHub repository studiowiga/wharry, unzip it and copy the <b>Wharry.vst3</b> folder into <b>C:\\Program Files\\Common Files\\VST3</b>."),
@@ -145,7 +153,7 @@ T = {
        ("Reaper", "Options &gt; Preferences &gt; Plug-ins &gt; VST &gt; <b>Re-scan</b>. The plugin appears as <b>Wharry (Studio Wiga)</b>. To control it with a MIDI pedal, make sure the track receives MIDI from your controller (record-arm or input monitoring with MIDI input set to your device).")],
  ov_t="3. Interface overview",
  ov_rows=[["#", "Control", "Role"],
-   ["1", "Treadle", "Expression pedal. Toe up = 0 %, toe down = 100 %. Moves with the mouse (drag down to press the toe, wheel, double-click = full up / full down), with MIDI CC 11 (or any learnt CC) and with DAW automation."],
+   ["1", "Treadle", "Expression pedal. Toe up = 0 %, toe down = 100 %. Moves with the mouse (drag down to press the toe, wheel, double-click = full up / full down), with a MIDI CC assigned by MIDI Learn and with DAW automation."],
    ["2", "Program selector", "21 detents: 10 Whammy, 2 Detune, 9 Harmony programs. Drag up / down or use the mouse wheel."],
    ["3", "Screen", "Engine, ON / BYPASS, preset name (or family) and number, previous / current / next program, live pitch offset, treadle travel bars and the status line. Click the previous / next program to step through the programs, click anywhere else (PRESETS) to open the preset list."],
    ["4", "CLASSIC · CHORDS", "Pitch engine selector (single notes / chords)."],
@@ -166,23 +174,23 @@ T = {
  fs=["<b>Footswitch</b>: click to switch the effect on or off; the cap goes down while pressed (also when switched by MIDI) and the LED shows the state. Switching programs or engines uses a short crossfade (no clicks).",
      "<b>CLASSIC / CHORDS</b>: click the lever; it slides in its slot. The engine change is crossfaded.",
      "<b>Treadle look</b>: the drawing follows the tilt with light and shadow: raised toe catches the light and casts a shadow, a soft reflection slides along the rubber, and the toe darkens when pressed down.",
-     "<b>Expression pedal</b>: <b>CC 11</b> moves the treadle directly, as on the original pedal. <b>The pedal direction is inverted by default</b> (right-click &gt; <b>Invert pedal direction</b> is ticked when the plugin opens): untick it if the treadle moves the wrong way with your pedal. Right-click the treadle or the enclosure: <b>MIDI learn pedal controller</b>, <b>Reset to CC 11 (Whammy standard)</b>, <b>Invert pedal direction</b>, <b>Calibrate pedal</b>, <b>Reset pedal calibration</b>.",
-     "<b>Pedal range</b>: many expression pedals never send exactly 0 and 127 (an M-Audio EX-P on an M-Vave Chocolate Plus often sends about 2 to 116). Wharry learns the real range automatically the first time you press the pedal fully down and up, and adds a small dead zone at both ends: toe up is exactly 0, toe down exactly the full interval. If the pedal is linked through your DAW instead of CC 11, use <b>Calibrate pedal</b>: press it fully down and up; the calibration ends by itself (or choose <b>Finish pedal calibration</b>, or click the screen)."],
+     "<b>Expression pedal</b>: no CC is assigned by default; once your pedal's CC is learnt (right-click the treadle › <b>MIDI Learn: Expression pedal</b>, or <b>MIDI learn pedal controller</b>), it moves the treadle directly, as on the original pedal. <b>The pedal direction is inverted by default</b> (right-click &gt; <b>Invert pedal direction</b> is ticked when the plugin opens): untick it if the treadle moves the wrong way with your pedal. Right-click the treadle or the enclosure: <b>MIDI learn pedal controller</b>, <b>Clear pedal MIDI</b>, <b>Invert pedal direction</b>, <b>Calibrate pedal</b>, <b>Reset pedal calibration</b>.",
+     "<b>Pedal range</b>: many expression pedals never send exactly 0 and 127 (an M-Audio EX-P on an M-Vave Chocolate Plus often sends about 2 to 116). Wharry learns the real range automatically the first time you press the pedal fully down and up, and adds a small dead zone at both ends: toe up is exactly 0, toe down exactly the full interval. If the pedal is linked through your DAW instead of a learnt CC, use <b>Calibrate pedal</b>: press it fully down and up; the calibration ends by itself (or choose <b>Finish pedal calibration</b>, or click the screen)."],
  midi_t="6. MIDI",
- midi=["<b>MIDI Learn on every control</b>: right-click a control (the treadle, the program selector, GLIDE, TONE, MIX, the CLASSIC / CHORDS switch or the footswitch). The top of the menu shows <b>MIDI Learn: &lt;Name&gt; (CC n / none)</b> with the current assignment, <b>Clear MIDI: &lt;Name&gt;</b> and, while a learn is waiting, <b>Cancel MIDI learn</b>. Choose MIDI Learn, then move a pedal, a knob or press a footswitch of your controller: the status line of the screen shows <b>MIDI LEARN: move a control for &lt;Name&gt;</b>, then <b>&lt;Name&gt; = CC n</b> for 2 seconds.",
-       "Right-click outside the controls (for example on the enclosure) to open the usual menu with a <b>MIDI</b> submenu: <b>Learn</b> for each of the 7 controls (with its current assignment), <b>Cancel MIDI learn</b> and <b>Reset MIDI to defaults</b> (pedal CC 11, all others none). Choosing the pending item again also cancels the learn.",
-       "A CC number can only drive one control: learning a CC that is already used removes it from the other control. Learn accepts CC 0 to 119; the CLASSIC / CHORDS switch and the footswitch can also learn a MIDI <b>note</b>. Wharry listens on all MIDI channels. <b>Assignments are saved with the project</b> (and with DAW presets); projects made with older versions keep their pedal and switch assignments."],
- midi_hdr=["Control", "Default CC", "Type"],
- midi_rows=[["Expression pedal (treadle)", "CC 11", "Continuous 0-127 (toe up to toe down), with auto range, calibration and inversion (on by default)"],
-            ["Program selector", "none", "21-position selector: the 0-127 travel is split into 21 equal zones (programs 1 to 21)"],
-            ["Glide", "none", "Continuous 0-127 = 0 to 250 ms"], ["Tone", "none", "Continuous 0-127 = 0-100 %"], ["Mix", "none", "Continuous 0-127 = 0-100 %"],
-            ["CLASSIC / CHORDS switch", "none", "Momentary footswitch (CC or note): each press (CC 64 or more, or note on) toggles"],
-            ["ON / OFF footswitch", "none", "Momentary footswitch (CC or note): each press (CC 64 or more, or note on) toggles"]],
+ midi=["<b>No CC is assigned by default</b>: every control is assigned with <b>MIDI Learn</b>. Right-click a control (the treadle, the program selector, GLIDE, TONE, MIX, the CLASSIC / CHORDS switch or the footswitch). The top of the menu shows <b>MIDI Learn: &lt;Name&gt; (CC n / none)</b> with the current assignment, <b>Clear MIDI: &lt;Name&gt;</b> and, while a learn is waiting, <b>Cancel MIDI learn</b>. Choose MIDI Learn, then move a pedal, a knob or press a footswitch of your controller: the status line of the screen shows <b>MIDI LEARN: move a control for &lt;Name&gt;</b>, then <b>&lt;Name&gt; = CC n</b> for 2 seconds.",
+       "Right-click outside the controls (for example on the enclosure) to open the usual menu with a <b>MIDI</b> submenu: <b>Learn</b> for each of the 7 controls (with its current assignment), <b>Cancel MIDI learn</b> (while a learn is waiting) and <b>Clear all MIDI assignments</b> (CCs and notes). Choosing the pending item again also cancels the learn.",
+       "A CC number can only drive one control: learning a CC that is already used removes it from the other control. Learn accepts CC 0 to 119; the CLASSIC / CHORDS switch and the footswitch can also learn a MIDI <b>note</b>. Wharry listens on all MIDI channels. <b>Assignments are saved with the project</b> (and with DAW presets). A project made with an older version that still had the former factory assignment opens with no assignment; a project in which you had changed an assignment keeps its assignments."],
+ midi_hdr=["Control", "Type"],
+ midi_rows=[["Expression pedal (treadle)", "Continuous 0-127 (toe up to toe down), with auto range, calibration and inversion (on by default)"],
+            ["Program selector", "21-position selector: the 0-127 travel is split into 21 equal zones (programs 1 to 21)"],
+            ["Glide", "Continuous 0-127 = 0 to 250 ms"], ["Tone", "Continuous 0-127 = 0-100 %"], ["Mix", "Continuous 0-127 = 0-100 %"],
+            ["CLASSIC / CHORDS switch", "Momentary footswitch (CC or note): each press (CC 64 or more, or note on) toggles"],
+            ["ON / OFF footswitch", "Momentary footswitch (CC or note): each press (CC 64 or more, or note on) toggles"]],
  midi2=["<b>Program Change</b> (right-click &gt; <b>Respond to MIDI Program Change</b>, on by default), same logic as the Whammy 5: PC 1-21 = programs 1-21 in Classic, PC 22-42 = same programs bypassed, PC 43-63 = Chords, PC 64-84 = Chords bypassed.",
-        "<b>M-Vave Chocolate Plus</b>: plug your expression pedal into its EXP input and set it to CC 11 (or MIDI-learn the treadle); learn one footswitch on the Wharry footswitch and another one on CLASSIC / CHORDS.",
+        "<b>M-Vave Chocolate Plus</b>: plug your expression pedal into its EXP input and MIDI-learn the treadle with it; learn one footswitch on the Wharry footswitch and another one on CLASSIC / CHORDS.",
         "Every control is also a DAW parameter: Program (selector), Expression Pedal, Classic / Chords (switch), Effect On (footswitch), Chords Studio HQ engine, Glide, Tone, Mix, Pedal Calibration Heel / Toe, MIDI Pedal Invert, Respond to MIDI Program Change; all can be automated in Reaper."],
  win_t="7. Window",
- win=["Wharry uses the double pedal format with the same window heights as Ring Think. Right-click &gt; <b>Plugin size</b>: <b>60 % (default)</b>, <b>75 %</b>, <b>100 %</b>. The window opens at its default size and can never be made smaller than it; you can also drag the bottom-right corner (proportions are kept).",
+ win=["Wharry uses the double pedal format with the same window heights as Ring Think. Right-click &gt; <b>Plugin size</b>: <b>60 %</b>, <b>75 %</b>, <b>100 %</b> for this window, with “(default)” next to the default size. Below them, <b>Default size (new windows)</b> chooses the opening size of every new Wharry window: a setting common to all instances and saved on the computer; the open window takes that size too. A size chosen in this menu for an instance is saved with the project and takes priority over the default size when the project is reopened; an instance with no size of its own opens at the default size. You can also drag the bottom-right corner (proportions are kept). The window can never be made smaller than <b>60 %</b>.",
       "The <b>status line</b> at the bottom of the screen shows the live values: pedal position, GLIDE, TONE, MIX (and the latency in Studio HQ), or the instructions during a calibration or a MIDI learn."],
  pre_t="8. Presets",
  pre=["Click the screen (or use the preset menu of your DAW) to load one of the 21 original programs or one of the 14 Studio Wiga factory presets:"],
@@ -200,8 +208,8 @@ T = {
        ["Channels", "Mono or stereo in, mono or stereo out (the input is summed to mono)"],
        ["Latency", "0 samples (Classic, Chords live) · about 170 ms (Chords Studio HQ, reported to the DAW)"], ["Pitch tracking", "about 35 Hz to 1500 Hz (Classic)"],
        ["Range", "up to +2 octaves / -3 octaves"],
-       ["MIDI", "MIDI Learn on all 7 controls (saved with the project), expression pedal CC 11 by default (inverted by default), notes for the switches, Program Change 1-84 (Whammy 5 map), all channels"],
-       ["Window", "60 % (default, also the minimum size), 75 %, 100 %; anti-freeze v2 on Windows (display caches rebuilt by a timer, watchdog that restarts drawing, no call to the host from the audio thread)"],
+       ["MIDI", "MIDI Learn on all 7 controls (no default assignment, saved with the project), expression pedal inverted by default, notes for the switches, Program Change 1-84 (Whammy 5 map), all channels"],
+       ["Window", "Plugin size 60 % (minimum), 75 %, 100 %, default size of new windows selectable; anti-freeze v2 on Windows (display caches rebuilt by a timer, watchdog that restarts drawing, no call to the host from the audio thread)"],
        ["CPU", "about 2 % of one core at 48 kHz"]],
  updown_cap="Treadle toe up (left) and toe down (right): the drawing follows the MIDI pedal and automation in real time.",
  spec_h=["", ""]),
@@ -209,7 +217,7 @@ T = {
  lang="FRANÇAIS", sub="Pédale d'expression de transposition &nbsp;·&nbsp; VST3 pour Windows et macOS", ver="Notice d'utilisation &nbsp;·&nbsp; version " + VERSION,
  intro_t="1. Présentation",
  intro=["<b>Wharry</b> est un plugin Studio Wiga qui reproduit le fonctionnement de la pédale de transposition DigiTech Whammy 5 : une pédale à bascule qui fait glisser vos notes vers le haut ou le bas, ajoute une harmonie mobile ou un léger doublage désaccordé.",
-        "Il garde la logique d'origine (21 programmes, commutateur Classic / Chords, pilotage du plateau par le MIDI CC 11, sélection par Program Change) et ajoute quelques plus : boutons GLIDE, TONE et MIX, écran en direct, moteur d'accords qualité studio, et un plateau qui bascule à l'écran en temps réel avec votre pédale d'expression MIDI ou les automations du DAW.",
+        "Il garde la logique d'origine (21 programmes, commutateur Classic / Chords, pilotage du plateau en MIDI, sélection par Program Change) et ajoute quelques plus : boutons GLIDE, TONE et MIX, écran en direct, moteur d'accords qualité studio, et un plateau qui bascule à l'écran en temps réel avec votre pédale d'expression MIDI ou les automations du DAW.",
         "Son : le mode Classic a le caractère rapide et un peu granuleux de la Whammy d'origine sur notes seules ; le mode Chords garde les accords justes pendant le glissement."],
  inst_t="2. Installation",
  inst=[("Windows", "Téléchargez l'artefact <b>Wharry-VST3-Windows</b> dans l'onglet Actions du dépôt GitHub studiowiga/wharry, décompressez-le et copiez le dossier <b>Wharry.vst3</b> dans <b>C:\\Program Files\\Common Files\\VST3</b>."),
@@ -217,7 +225,7 @@ T = {
        ("Reaper", "Options &gt; Préférences &gt; Plug-ins &gt; VST &gt; <b>Re-scan</b>. Le plugin apparaît sous le nom <b>Wharry (Studio Wiga)</b>. Pour le piloter avec une pédale MIDI, la piste doit recevoir le MIDI de votre contrôleur (armement ou monitoring d'entrée avec l'entrée MIDI réglée sur votre appareil).")],
  ov_t="3. Vue d'ensemble de l'interface",
  ov_rows=[["#", "Commande", "Rôle"],
-   ["1", "Plateau", "Pédale d'expression. Orteil levé = 0 %, orteil enfoncé = 100 %. Se déplace à la souris (tirer vers le bas = appuyer sur la pointe, molette, double-clic = tout en haut / tout en bas), avec le MIDI CC 11 (ou tout CC appris) et avec les automations du DAW."],
+   ["1", "Plateau", "Pédale d'expression. Orteil levé = 0 %, orteil enfoncé = 100 %. Se déplace à la souris (tirer vers le bas = appuyer sur la pointe, molette, double-clic = tout en haut / tout en bas), avec un CC MIDI assigné par MIDI Learn et avec les automations du DAW."],
    ["2", "Sélecteur de programme", "21 crans : 10 programmes Whammy, 2 Detune, 9 Harmony. Glisser vers le haut / le bas ou utiliser la molette."],
    ["3", "Écran", "Moteur, ON / BYPASS, nom du preset (ou famille) et numéro, programme précédent / actuel / suivant, décalage en direct, barres de course du plateau et ligne d'état. Un clic sur le programme précédent / suivant change de programme ; un clic ailleurs (PRESETS) ouvre la liste des presets."],
    ["4", "CLASSIC · CHORDS", "Choix du moteur de transposition (notes seules / accords)."],
@@ -238,23 +246,23 @@ T = {
  fs=["<b>Footswitch</b> : un clic active ou coupe l'effet ; le chapeau s'enfonce pendant l'appui (aussi quand il est commandé en MIDI) et la LED indique l'état. Les changements de programme ou de moteur se font avec un fondu court (pas de clic).",
      "<b>CLASSIC / CHORDS</b> : cliquez sur le levier, il coulisse dans sa fente. Le changement de moteur se fait en fondu.",
      "<b>Rendu du plateau</b> : le dessin suit l'inclinaison avec lumière et ombres : la pointe levée prend la lumière et projette une ombre, un reflet doux glisse sur le caoutchouc, et la pointe s'assombrit quand elle est enfoncée.",
-     "<b>Pédale d'expression</b> : le <b>CC 11</b> déplace directement le plateau, comme sur la pédale d'origine. <b>Le sens de la pédale est inversé par défaut</b> (clic droit &gt; <b>Invert pedal direction</b> est coché à l'ouverture du plugin) : décochez-le si le plateau part dans le mauvais sens avec votre pédale. Clic droit sur le plateau ou le boîtier : <b>MIDI learn pedal controller</b>, <b>Reset to CC 11 (Whammy standard)</b>, <b>Invert pedal direction</b>, <b>Calibrate pedal</b>, <b>Reset pedal calibration</b>.",
-     "<b>Course de la pédale</b> : beaucoup de pédales d'expression n'envoient jamais exactement 0 et 127 (une M-Audio EX-P sur une M-Vave Chocolate Plus envoie souvent environ 2 à 116). Wharry apprend tout seul la course réelle dès que vous enfoncez puis relevez la pédale à fond, et ajoute une petite zone morte aux deux butées : pédale relevée = exactement 0, enfoncée = exactement l'intervalle complet. Si la pédale est liée par le DAW au lieu du CC 11, utilisez <b>Calibrate pedal</b> : enfoncez-la puis relevez-la à fond ; la calibration se termine seule (ou choisissez <b>Finish pedal calibration</b>, ou cliquez sur l'écran)."],
+     "<b>Pédale d'expression</b> : aucun CC n'est assigné par défaut ; une fois le CC de votre pédale appris (clic droit sur le plateau › <b>MIDI Learn: Expression pedal</b>, ou <b>MIDI learn pedal controller</b>), il déplace directement le plateau, comme sur la pédale d'origine. <b>Le sens de la pédale est inversé par défaut</b> (clic droit &gt; <b>Invert pedal direction</b> est coché à l'ouverture du plugin) : décochez-le si le plateau part dans le mauvais sens avec votre pédale. Clic droit sur le plateau ou le boîtier : <b>MIDI learn pedal controller</b>, <b>Clear pedal MIDI</b>, <b>Invert pedal direction</b>, <b>Calibrate pedal</b>, <b>Reset pedal calibration</b>.",
+     "<b>Course de la pédale</b> : beaucoup de pédales d'expression n'envoient jamais exactement 0 et 127 (une M-Audio EX-P sur une M-Vave Chocolate Plus envoie souvent environ 2 à 116). Wharry apprend tout seul la course réelle dès que vous enfoncez puis relevez la pédale à fond, et ajoute une petite zone morte aux deux butées : pédale relevée = exactement 0, enfoncée = exactement l'intervalle complet. Si la pédale est liée par le DAW au lieu d'un CC appris, utilisez <b>Calibrate pedal</b> : enfoncez-la puis relevez-la à fond ; la calibration se termine seule (ou choisissez <b>Finish pedal calibration</b>, ou cliquez sur l'écran)."],
  midi_t="6. MIDI",
- midi=["<b>MIDI Learn sur toutes les commandes</b> : faites un clic droit sur une commande (le plateau, le sélecteur de programme, GLIDE, TONE, MIX, l'inverseur CLASSIC / CHORDS ou le footswitch). Le haut du menu affiche <b>MIDI Learn: &lt;Nom&gt; (CC n / none)</b> avec l'assignation actuelle, <b>Clear MIDI: &lt;Nom&gt;</b> et, tant qu'un apprentissage est en attente, <b>Cancel MIDI learn</b>. Choisissez MIDI Learn puis bougez une pédale, un bouton ou appuyez sur un footswitch de votre contrôleur : la ligne d'état de l'écran affiche <b>MIDI LEARN: move a control for &lt;Nom&gt;</b>, puis <b>&lt;Nom&gt; = CC n</b> pendant 2 secondes.",
-       "Un clic droit hors des commandes (par exemple sur le boîtier) ouvre le menu habituel avec un sous-menu <b>MIDI</b> : <b>Learn</b> pour chacune des 7 commandes (avec son assignation actuelle), <b>Cancel MIDI learn</b> et <b>Reset MIDI to defaults</b> (pédale CC 11, toutes les autres sans CC). Choisir de nouveau la commande en attente annule aussi l'apprentissage.",
-       "Un numéro de CC ne pilote qu'une seule commande : apprendre un CC déjà utilisé le retire de l'autre commande. L'apprentissage accepte les CC 0 à 119 ; l'inverseur CLASSIC / CHORDS et le footswitch peuvent aussi apprendre une <b>note</b> MIDI. Wharry écoute tous les canaux MIDI. <b>Les assignations sont sauvegardées avec le projet</b> (et avec les presets du DAW) ; les projets faits avec une version antérieure gardent leurs assignations de pédale et de commutateurs."],
- midi_hdr=["Commande", "CC par défaut", "Type"],
- midi_rows=[["Expression pedal (plateau)", "CC 11", "Continu 0-127 (orteil levé à orteil enfoncé), avec course automatique, calibration et inversion (active par défaut)"],
-            ["Program selector", "aucun", "Sélecteur à 21 positions : la course 0-127 est découpée en 21 zones égales (programmes 1 à 21)"],
-            ["Glide", "aucun", "Continu 0-127 = 0 à 250 ms"], ["Tone", "aucun", "Continu 0-127 = 0-100 %"], ["Mix", "aucun", "Continu 0-127 = 0-100 %"],
-            ["CLASSIC / CHORDS switch", "aucun", "Footswitch momentané (CC ou note) : chaque appui (CC à 64 ou plus, ou note) bascule"],
-            ["ON / OFF footswitch", "aucun", "Footswitch momentané (CC ou note) : chaque appui (CC à 64 ou plus, ou note) bascule"]],
+ midi=["<b>Aucun CC n'est assigné par défaut</b> : chaque commande s'assigne par <b>MIDI Learn</b>. Faites un clic droit sur une commande (le plateau, le sélecteur de programme, GLIDE, TONE, MIX, l'inverseur CLASSIC / CHORDS ou le footswitch). Le haut du menu affiche <b>MIDI Learn: &lt;Nom&gt; (CC n / none)</b> avec l'assignation actuelle, <b>Clear MIDI: &lt;Nom&gt;</b> et, tant qu'un apprentissage est en attente, <b>Cancel MIDI learn</b>. Choisissez MIDI Learn puis bougez une pédale, un bouton ou appuyez sur un footswitch de votre contrôleur : la ligne d'état de l'écran affiche <b>MIDI LEARN: move a control for &lt;Nom&gt;</b>, puis <b>&lt;Nom&gt; = CC n</b> pendant 2 secondes.",
+       "Un clic droit hors des commandes (par exemple sur le boîtier) ouvre le menu habituel avec un sous-menu <b>MIDI</b> : <b>Learn</b> pour chacune des 7 commandes (avec son assignation actuelle), <b>Cancel MIDI learn</b> (pendant une attente) et <b>Clear all MIDI assignments</b> (CC et notes). Choisir de nouveau la commande en attente annule aussi l'apprentissage.",
+       "Un numéro de CC ne pilote qu'une seule commande : apprendre un CC déjà utilisé le retire de l'autre commande. L'apprentissage accepte les CC 0 à 119 ; l'inverseur CLASSIC / CHORDS et le footswitch peuvent aussi apprendre une <b>note</b> MIDI. Wharry écoute tous les canaux MIDI. <b>Les assignations sont sauvegardées avec le projet</b> (et avec les presets du DAW). Un projet fait avec une version antérieure qui avait encore l'ancienne assignation d'usine s'ouvre sans assignation ; un projet où vous aviez changé une assignation garde ses assignations."],
+ midi_hdr=["Commande", "Type"],
+ midi_rows=[["Expression pedal (plateau)", "Continu 0-127 (orteil levé à orteil enfoncé), avec course automatique, calibration et inversion (active par défaut)"],
+            ["Program selector", "Sélecteur à 21 positions : la course 0-127 est découpée en 21 zones égales (programmes 1 à 21)"],
+            ["Glide", "Continu 0-127 = 0 à 250 ms"], ["Tone", "Continu 0-127 = 0-100 %"], ["Mix", "Continu 0-127 = 0-100 %"],
+            ["CLASSIC / CHORDS switch", "Footswitch momentané (CC ou note) : chaque appui (CC à 64 ou plus, ou note) bascule"],
+            ["ON / OFF footswitch", "Footswitch momentané (CC ou note) : chaque appui (CC à 64 ou plus, ou note) bascule"]],
  midi2=["<b>Program Change</b> (clic droit &gt; <b>Respond to MIDI Program Change</b>, actif par défaut), même logique que la Whammy 5 : PC 1-21 = programmes 1-21 en Classic, PC 22-42 = mêmes programmes en bypass, PC 43-63 = Chords, PC 64-84 = Chords en bypass.",
-        "<b>M-Vave Chocolate Plus</b> : branchez votre pédale d'expression sur son entrée EXP et réglez-la sur le CC 11 (ou faites un MIDI Learn du plateau) ; apprenez un footswitch sur le footswitch de Wharry et un autre sur CLASSIC / CHORDS.",
+        "<b>M-Vave Chocolate Plus</b> : branchez votre pédale d'expression sur son entrée EXP et faites avec elle un MIDI Learn du plateau ; apprenez un footswitch sur le footswitch de Wharry et un autre sur CLASSIC / CHORDS.",
         "Chaque commande est aussi un paramètre du DAW : Program (selector), Expression Pedal, Classic / Chords (switch), Effect On (footswitch), Chords Studio HQ engine, Glide, Tone, Mix, Pedal Calibration Heel / Toe, MIDI Pedal Invert, Respond to MIDI Program Change ; tous automatisables dans Reaper."],
  win_t="7. Fenêtre",
- win=["Wharry utilise le format pédale double avec les mêmes hauteurs de fenêtre que Ring Think. Clic droit &gt; <b>Plugin size</b> : <b>60 % (default)</b>, <b>75 %</b>, <b>100 %</b>. La fenêtre s'ouvre à sa taille par défaut et ne peut jamais être réduite en dessous ; on peut aussi tirer le coin en bas à droite (les proportions sont conservées).",
+ win=["Wharry utilise le format pédale double avec les mêmes hauteurs de fenêtre que Ring Think. Clic droit &gt; <b>Plugin size</b> : <b>60 %</b>, <b>75 %</b>, <b>100 %</b> pour cette fenêtre, avec « (default) » à côté de la taille par défaut. En dessous, <b>Default size (new windows)</b> choisit la taille d'ouverture de toutes les nouvelles fenêtres de Wharry : réglage commun à toutes les instances, enregistré sur l'ordinateur ; la fenêtre ouverte prend aussi cette taille. Une taille choisie dans ce menu pour une instance est sauvegardée avec le projet et reste prioritaire sur la taille par défaut à sa réouverture ; une instance sans taille propre s'ouvre à la taille par défaut. On peut aussi tirer le coin en bas à droite (les proportions sont conservées). La fenêtre ne peut jamais être réduite sous <b>60 %</b>.",
       "La <b>ligne d'état</b>, en bas de l'écran, affiche les valeurs en direct : position de la pédale, GLIDE, TONE, MIX (et la latence en Studio HQ), ou les consignes pendant une calibration ou un MIDI Learn."],
  pre_t="8. Presets",
  pre=["Cliquez sur l'écran (ou utilisez le menu de presets de votre DAW) pour charger l'un des 21 programmes d'origine ou l'un des 14 presets usine Studio Wiga :"],
@@ -272,8 +280,8 @@ T = {
        ["Canaux", "Entrée mono ou stéréo, sortie mono ou stéréo (l'entrée est sommée en mono)"],
        ["Latence", "0 échantillon (Classic, Chords live) · environ 170 ms (Chords Studio HQ, annoncée au DAW)"], ["Suivi de hauteur", "d'environ 35 Hz à 1500 Hz (Classic)"],
        ["Plage", "jusqu'à +2 octaves / -3 octaves"],
-       ["MIDI", "MIDI Learn sur les 7 commandes (sauvegardé avec le projet), pédale d'expression CC 11 par défaut (inversée par défaut), notes pour les commutateurs, Program Change 1-84 (table de la Whammy 5), tous canaux"],
-       ["Fenêtre", "60 % (par défaut, c'est aussi la taille minimale), 75 %, 100 % ; anti-gel v2 sous Windows (caches d'affichage refaits par un timer, chien de garde qui relance le dessin, aucun appel à l'hôte depuis le thread audio)"],
+       ["MIDI", "MIDI Learn sur les 7 commandes (aucune assignation par défaut, sauvegardé avec le projet), pédale d'expression inversée par défaut, notes pour les commutateurs, Program Change 1-84 (table de la Whammy 5), tous canaux"],
+       ["Fenêtre", "Plugin size 60 % (minimum), 75 %, 100 %, taille par défaut des nouvelles fenêtres au choix ; anti-gel v2 sous Windows (caches d'affichage refaits par un timer, chien de garde qui relance le dessin, aucun appel à l'hôte depuis le thread audio)"],
        ["Processeur", "environ 2 % d'un cœur à 48 kHz"]],
  updown_cap="Plateau orteil levé (à gauche) et orteil enfoncé (à droite) : le dessin suit la pédale MIDI et les automations en temps réel.",
  spec_h=["", ""]),
@@ -308,7 +316,7 @@ def section(lang):
     f.append(KeepTogether([Spacer(1, 3 * mm), img(updown, W * 0.56), P(t["updown_cap"], "small")]))
     f.append(P(t["fs_t"], "h1")); f += bullets(t["fs"])
     f.append(P(t["midi_t"], "h1")); f += [P(x) for x in t["midi"]]
-    f.append(Spacer(1, 2 * mm)); f.append(KeepTogether([table([t["midi_hdr"]] + t["midi_rows"], [44 * mm, 24 * mm, W - 68 * mm])])); f.append(Spacer(1, 3 * mm))
+    f.append(Spacer(1, 2 * mm)); f.append(KeepTogether([table([t["midi_hdr"]] + t["midi_rows"], [48 * mm, W - 48 * mm])])); f.append(Spacer(1, 3 * mm))
     f += bullets(t["midi2"])
     f.append(P(t["win_t"], "h1")); f += [P(x) for x in t["win"]]
     f.append(PageBreak())
