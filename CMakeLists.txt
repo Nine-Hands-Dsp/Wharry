@@ -39,7 +39,7 @@ else()
 endif()
 
 juce_add_plugin(Wharry
-  COMPANY_NAME "Studio Wiga"
+  COMPANY_NAME "NINE HANDS | DSP"
   PLUGIN_MANUFACTURER_CODE Wiga
   PLUGIN_CODE WgWh
   BUNDLE_ID com.studiowiga.wharry

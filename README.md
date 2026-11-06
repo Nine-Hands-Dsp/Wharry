@@ -1,4 +1,4 @@
-# Wharry (Studio Wiga)
+# Wharry (NINE HANDS | DSP)
 
 Plugin VST3 (Windows / macOS, + AU sur Mac) reproduisant le fonctionnement de la pédale DigiTech Whammy 5,
 au format **pédale double** (fenêtre aux hauteurs de Ring Think : 544 x 495 par défaut et au minimum, puis 75 % et 100 %).

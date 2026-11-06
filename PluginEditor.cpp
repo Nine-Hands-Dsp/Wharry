@@ -791,7 +791,7 @@ private:
     {
         PopupMenu m;
         const int cur = currentProgram(), af = proc.getActiveFactory();
-        m.addSectionHeader ("Studio Wiga factory presets");
+        m.addSectionHeader ("NINE HANDS | DSP factory presets");
         for (int i = 0; i < WharryProcessor::kNumFactory; ++i) m.addItem (101 + i, WharryProcessor::factory (i).name, true, i == af);
         m.addSectionHeader ("Whammy programs");
         for (int i = 0; i < wharry::kNumPrograms; ++i)
@@ -955,7 +955,7 @@ WharryEditor::~WharryEditor() = default;
 // Anti-gel de la fenêtre (Windows) : JUCE 8 dessine par défaut avec Direct2D ; avec certains pilotes (Intel)
 // la fenêtre cesse de se rafraîchir alors que le DAW continue. Le moteur logiciel est stable partout.
 //==============================================================================
-// Anti-gel v2 (Studio Wiga) :
+// Anti-gel v2 (NINE HANDS | DSP) :
 //  1. moteur de rendu logiciel forcé sur Windows (Direct2D peut figer la fenêtre dans certains hôtes),
 //     appliqué à chaque nouvelle fenêtre hôte (peer) et revérifié toutes les secondes, jamais en boucle ;
 //  2. aucun calcul lourd dans paint() : les caches d'images (fond, commandes, positions du plateau) sont refaits

@@ -354,7 +354,7 @@ void WharryProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midi
     if (lat != reportedLatency.load()) { reportedLatency = lat; latencyToSet = lat; }   // transmise à l'hôte par le timer
 }
 
-// Anti-gel v2 (Studio Wiga) : jamais d'appel à l'hôte (setValueNotifyingHost, setLatencySamples) ni d'allocation
+// Anti-gel v2 (NINE HANDS | DSP) : jamais d'appel à l'hôte (setValueNotifyingHost, setLatencySamples) ni d'allocation
 // depuis le thread audio. Le MIDI met la valeur en file (pendingValue / pendingSet) ; le timer du processeur
 // (60 Hz, thread de messages) la transmet au DAW et à la fenêtre.
 const char* WharryProcessor::queuedId (int i)

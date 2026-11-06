@@ -1,4 +1,4 @@
-// Wharry (Studio Wiga) - moteur audio, sans dépendance JUCE (testable hors DAW)
+// Wharry (NINE HANDS | DSP) - moteur audio, sans dépendance JUCE (testable hors DAW)
 // Copie de fonctionnement de la DigiTech Whammy 5 :
 //   - 10 programmes WHAMMY  : signal 100 % traité, la pédale glisse de 0 (orteil levé) à l'intervalle (orteil enfoncé)
 //   -  2 programmes DETUNE  : sec + voix légèrement désaccordée, la pédale règle le niveau de la voix

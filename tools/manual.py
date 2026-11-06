@@ -1,4 +1,4 @@
-# Wharry (Studio Wiga) - notice PDF bilingue (anglais puis français), illustrée avec le rendu réel du plugin.
+# Wharry (NINE HANDS | DSP) - notice PDF bilingue (anglais puis français), illustrée avec le rendu réel du plugin.
 # Usage : python3 tools/manual.py <dossier des captures (tools/render)> <fichier PDF de sortie>
 #   ou   python3 tools/manual.py tools/manual_assets <fichier PDF de sortie>
 # tools/manual_assets : images de la notice v1.9.0 (rendu réel du plugin, visuel inchangé depuis) : wharry_annotated.png,
@@ -144,13 +144,13 @@ T = {
 "en": dict(
  lang="ENGLISH", sub="Pitch-shift expression pedal &nbsp;·&nbsp; VST3 for Windows and macOS", ver="User manual &nbsp;·&nbsp; version " + VERSION,
  intro_t="1. Introduction",
- intro=["<b>Wharry</b> is a Studio Wiga plugin that reproduces the behaviour of the DigiTech Whammy 5 pitch-shifting pedal: a rocker pedal that bends your notes up or down, adds a moving harmony, or a subtle detuned double.",
+ intro=["<b>Wharry</b> is a NINE HANDS | DSP plugin that reproduces the behaviour of the DigiTech Whammy 5 pitch-shifting pedal: a rocker pedal that bends your notes up or down, adds a moving harmony, or a subtle detuned double.",
         "It keeps the original logic (21 programs, Classic / Chords switch, MIDI control of the treadle, Program Change selection) and adds a few modern extras: GLIDE, TONE and MIX knobs, a live screen, a studio-quality chords engine, and a treadle that tilts on screen in real time with your MIDI expression pedal or DAW automation.",
         "Sound: Classic mode has the fast, slightly gritty character of the original single-note Whammy; Chords mode keeps chords in tune while you bend them."],
  inst_t="2. Installation",
- inst=[("Windows", "Download the <b>Wharry-VST3-Windows</b> artifact from the Actions tab of the GitHub repository studiowiga/wharry, unzip it and copy the <b>Wharry.vst3</b> folder into <b>C:\\Program Files\\Common Files\\VST3</b>."),
+ inst=[("Windows", "Download the <b>Wharry-VST3-Windows</b> artifact from the Actions tab of the GitHub repository Nine-Hands-Dsp/wharry, unzip it and copy the <b>Wharry.vst3</b> folder into <b>C:\\Program Files\\Common Files\\VST3</b>."),
        ("macOS", "Download <b>Wharry-VST3-macOS</b>, unzip it and copy <b>Wharry.vst3</b> into <b>~/Library/Audio/Plug-Ins/VST3</b> (or /Library/Audio/Plug-Ins/VST3 for all users). If macOS blocks it, run <b>xattr -cr ~/Library/Audio/Plug-Ins/VST3/Wharry.vst3</b> in the Terminal. The binary is universal (Apple Silicon and Intel)."),
-       ("Reaper", "Options &gt; Preferences &gt; Plug-ins &gt; VST &gt; <b>Re-scan</b>. The plugin appears as <b>Wharry (Studio Wiga)</b>. To control it with a MIDI pedal, make sure the track receives MIDI from your controller (record-arm or input monitoring with MIDI input set to your device).")],
+       ("Reaper", "Options &gt; Preferences &gt; Plug-ins &gt; VST &gt; <b>Re-scan</b>. The plugin appears as <b>Wharry (NINE HANDS | DSP)</b>. To control it with a MIDI pedal, make sure the track receives MIDI from your controller (record-arm or input monitoring with MIDI input set to your device).")],
  ov_t="3. Interface overview",
  ov_rows=[["#", "Control", "Role"],
    ["1", "Treadle", "Expression pedal. Toe up = 0 %, toe down = 100 %. Moves with the mouse (drag down to press the toe, wheel, double-click = full up / full down), with a MIDI CC assigned by MIDI Learn and with DAW automation."],
@@ -193,7 +193,7 @@ T = {
  win=["Wharry uses the double pedal format with the same window heights as Ring Think. Right-click &gt; <b>Plugin size</b>: <b>60 %</b>, <b>75 %</b>, <b>100 %</b> for this window, with “(default)” next to the default size. Below them, <b>Default size (new windows)</b> chooses the opening size of every new Wharry window: a setting common to all instances and saved on the computer; the open window takes that size too. A size chosen in this menu for an instance is saved with the project and takes priority over the default size when the project is reopened; an instance with no size of its own opens at the default size. You can also drag the bottom-right corner (proportions are kept). The window can never be made smaller than <b>60 %</b>.",
       "The <b>status line</b> at the bottom of the screen shows the live values: pedal position, GLIDE, TONE, MIX (and the latency in Studio HQ), or the instructions during a calibration or a MIDI learn."],
  pre_t="8. Presets",
- pre=["Click the screen (or use the preset menu of your DAW) to load one of the 21 original programs or one of the 14 Studio Wiga factory presets:"],
+ pre=["Click the screen (or use the preset menu of your DAW) to load one of the 21 original programs or one of the 14 NINE HANDS | DSP factory presets:"],
  prog_t="Original programs",
  prog_hdr=["#", "Family", "Program", "Toe up", "Toe down"],
  fac_hdr=["Preset", "Program", "Engine", "Glide / Tone / Mix", "Description"],
@@ -216,13 +216,13 @@ T = {
 "fr": dict(
  lang="FRANÇAIS", sub="Pédale d'expression de transposition &nbsp;·&nbsp; VST3 pour Windows et macOS", ver="Notice d'utilisation &nbsp;·&nbsp; version " + VERSION,
  intro_t="1. Présentation",
- intro=["<b>Wharry</b> est un plugin Studio Wiga qui reproduit le fonctionnement de la pédale de transposition DigiTech Whammy 5 : une pédale à bascule qui fait glisser vos notes vers le haut ou le bas, ajoute une harmonie mobile ou un léger doublage désaccordé.",
+ intro=["<b>Wharry</b> est un plugin NINE HANDS | DSP qui reproduit le fonctionnement de la pédale de transposition DigiTech Whammy 5 : une pédale à bascule qui fait glisser vos notes vers le haut ou le bas, ajoute une harmonie mobile ou un léger doublage désaccordé.",
         "Il garde la logique d'origine (21 programmes, commutateur Classic / Chords, pilotage du plateau en MIDI, sélection par Program Change) et ajoute quelques plus : boutons GLIDE, TONE et MIX, écran en direct, moteur d'accords qualité studio, et un plateau qui bascule à l'écran en temps réel avec votre pédale d'expression MIDI ou les automations du DAW.",
         "Son : le mode Classic a le caractère rapide et un peu granuleux de la Whammy d'origine sur notes seules ; le mode Chords garde les accords justes pendant le glissement."],
  inst_t="2. Installation",
- inst=[("Windows", "Téléchargez l'artefact <b>Wharry-VST3-Windows</b> dans l'onglet Actions du dépôt GitHub studiowiga/wharry, décompressez-le et copiez le dossier <b>Wharry.vst3</b> dans <b>C:\\Program Files\\Common Files\\VST3</b>."),
+ inst=[("Windows", "Téléchargez l'artefact <b>Wharry-VST3-Windows</b> dans l'onglet Actions du dépôt GitHub Nine-Hands-Dsp/wharry, décompressez-le et copiez le dossier <b>Wharry.vst3</b> dans <b>C:\\Program Files\\Common Files\\VST3</b>."),
        ("macOS", "Téléchargez <b>Wharry-VST3-macOS</b>, décompressez-le et copiez <b>Wharry.vst3</b> dans <b>~/Bibliothèque/Audio/Plug-Ins/VST3</b> (ou /Bibliothèque/Audio/Plug-Ins/VST3 pour tous les utilisateurs). Si macOS le bloque, tapez <b>xattr -cr ~/Library/Audio/Plug-Ins/VST3/Wharry.vst3</b> dans le Terminal. Le binaire est universel (Apple Silicon et Intel)."),
-       ("Reaper", "Options &gt; Préférences &gt; Plug-ins &gt; VST &gt; <b>Re-scan</b>. Le plugin apparaît sous le nom <b>Wharry (Studio Wiga)</b>. Pour le piloter avec une pédale MIDI, la piste doit recevoir le MIDI de votre contrôleur (armement ou monitoring d'entrée avec l'entrée MIDI réglée sur votre appareil).")],
+       ("Reaper", "Options &gt; Préférences &gt; Plug-ins &gt; VST &gt; <b>Re-scan</b>. Le plugin apparaît sous le nom <b>Wharry (NINE HANDS | DSP)</b>. Pour le piloter avec une pédale MIDI, la piste doit recevoir le MIDI de votre contrôleur (armement ou monitoring d'entrée avec l'entrée MIDI réglée sur votre appareil).")],
  ov_t="3. Vue d'ensemble de l'interface",
  ov_rows=[["#", "Commande", "Rôle"],
    ["1", "Plateau", "Pédale d'expression. Orteil levé = 0 %, orteil enfoncé = 100 %. Se déplace à la souris (tirer vers le bas = appuyer sur la pointe, molette, double-clic = tout en haut / tout en bas), avec un CC MIDI assigné par MIDI Learn et avec les automations du DAW."],
@@ -265,7 +265,7 @@ T = {
  win=["Wharry utilise le format pédale double avec les mêmes hauteurs de fenêtre que Ring Think. Clic droit &gt; <b>Plugin size</b> : <b>60 %</b>, <b>75 %</b>, <b>100 %</b> pour cette fenêtre, avec « (default) » à côté de la taille par défaut. En dessous, <b>Default size (new windows)</b> choisit la taille d'ouverture de toutes les nouvelles fenêtres de Wharry : réglage commun à toutes les instances, enregistré sur l'ordinateur ; la fenêtre ouverte prend aussi cette taille. Une taille choisie dans ce menu pour une instance est sauvegardée avec le projet et reste prioritaire sur la taille par défaut à sa réouverture ; une instance sans taille propre s'ouvre à la taille par défaut. On peut aussi tirer le coin en bas à droite (les proportions sont conservées). La fenêtre ne peut jamais être réduite sous <b>60 %</b>.",
       "La <b>ligne d'état</b>, en bas de l'écran, affiche les valeurs en direct : position de la pédale, GLIDE, TONE, MIX (et la latence en Studio HQ), ou les consignes pendant une calibration ou un MIDI Learn."],
  pre_t="8. Presets",
- pre=["Cliquez sur l'écran (ou utilisez le menu de presets de votre DAW) pour charger l'un des 21 programmes d'origine ou l'un des 14 presets usine Studio Wiga :"],
+ pre=["Cliquez sur l'écran (ou utilisez le menu de presets de votre DAW) pour charger l'un des 21 programmes d'origine ou l'un des 14 presets usine NINE HANDS | DSP :"],
  prog_t="Programmes d'origine",
  prog_hdr=["#", "Famille", "Programme", "Orteil levé", "Orteil enfoncé"],
  fac_hdr=["Preset", "Programme", "Moteur", "Glide / Tone / Mix", "Description"],
@@ -326,7 +326,7 @@ def section(lang):
     f.append(table(rows, [10 * mm, 24 * mm, 46 * mm, 30 * mm, 30 * mm]))
     f.append(Spacer(1, 2 * mm)); f.append(P("st = semitones / demi-tons · c = cents", "small"))
     f.append(PageBreak())
-    f.append(P("Studio Wiga factory presets" if lang == "en" else "Presets usine Studio Wiga", "h2"))
+    f.append(P("NINE HANDS | DSP factory presets" if lang == "en" else "Presets usine NINE HANDS | DSP", "h2"))
     rows = [t["fac_hdr"]] + [[n, pr, eng, f"{g} ms · {to} % · {mx} %", FACT_DESC[lang][i]] for i, (n, pr, eng, g, to, mx) in enumerate(FACTORY)]
     f.append(table(rows, [40 * mm, 27 * mm, 17 * mm, 37 * mm, W - 121 * mm]))
     f.append(P(t["tips_t"], "h1")); f += bullets(t["tips"])
@@ -334,7 +334,7 @@ def section(lang):
     f.append(PageBreak())
     return f
 
-# logo Studio Wiga en foncé pour les pages blanches
+# logo NINE HANDS | DSP en foncé pour les pages blanches
 lg = Image.open(os.path.join(ROOT, "logo_studio_wiga_blanc.png")).convert("RGBA")
 la = np.array(lg); la[..., :3] = (29, 27, 28); Image.fromarray(la).save(os.path.join(TMP, "logo_dark.png"))
 
@@ -342,12 +342,12 @@ def deco(c, doc):
     c.saveState()
     c.setFillColor(RED); c.rect(0, A4[1] - 6 * mm, A4[0], 6 * mm, stroke=0, fill=1)
     c.setFont("Pop", 7.5); c.setFillColor(GREY)
-    c.drawString(18 * mm, 10 * mm, "Wharry (Studio Wiga) · v" + VERSION)
+    c.drawString(18 * mm, 10 * mm, "Wharry (NINE HANDS | DSP) · v" + VERSION)
     c.drawRightString(A4[0] - 18 * mm, 10 * mm, str(doc.page))
     c.restoreState()
 
 doc = BaseDocTemplate(OUT, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=16 * mm, bottomMargin=18 * mm,
-                      title="Wharry - Manual / Notice v" + VERSION, author="Studio Wiga")
+                      title="Wharry - Manual / Notice v" + VERSION, author="NINE HANDS | DSP")
 def cover_bg(c, doc):
     c.saveState(); c.setFillColor(colors.black); c.rect(0, 0, A4[0], A4[1], stroke=0, fill=1)
     c.setFillColor(RED); c.rect(0, A4[1] - 3 * mm, A4[0], 3 * mm, stroke=0, fill=1); c.restoreState()

@@ -1,5 +1,5 @@
 # Wharry : prépare les images du plugin à partir du design de l'utilisateur (design/wharry_design_source.png, 1390 x 1132)
-#   background.png   : fond 1020 x 928 (textes réécrits, LED / écran vidés, logo Studio Wiga, jacks Studio Wiga)
+#   background.png   : fond 1020 x 928 (textes réécrits, LED / écran vidés, logo NINE HANDS | DSP, jacks NINE HANDS | DSP)
 #   treadle_down.png : calque du plateau à plat (orteil enfoncé) ; le plugin calcule les autres positions en perspective
 #   fs_on.png / fs_off.png, toggle_lever.png : sprites des commandes (le levier de l'inverseur coulisse)
 #   tools/layout.txt : coordonnées des commandes dans le repère 1020 x 928 (reprises dans PluginEditor.cpp)
