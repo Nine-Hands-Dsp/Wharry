@@ -17,6 +17,7 @@ int main (int argc, char** argv)
         AudioBuffer<float> b (2, 256); MidiBuffer m;
         for (int i = 0; i < 200; ++i) { b.clear(); proc.processBlock (b, m); }
         for (int i = 0; i < 3; ++i) MessageManager::getInstance()->runDispatchLoopUntil (60);
+        MessageManager::getInstance()->runDispatchLoopUntil (3200);   // la ligne d'état s'efface, la barre de presets revient
         auto img = ed->createComponentSnapshot (ed->getLocalBounds(), true, 1.0f);
         File f (out + "/" + name + ".png"); f.deleteFile();
         FileOutputStream os (f); PNGImageFormat().writeImageToStream (img, os);

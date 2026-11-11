@@ -1,361 +1,282 @@
-# Wharry (NINE HANDS | DSP) - notice PDF bilingue (anglais puis français), illustrée avec le rendu réel du plugin.
-# Usage : python3 tools/manual.py <dossier des captures (tools/render)> <fichier PDF de sortie>
-#   ou   python3 tools/manual.py tools/manual_assets <fichier PDF de sortie>
-# tools/manual_assets : images de la notice v1.9.0 (rendu réel du plugin, visuel inchangé depuis) : wharry_annotated.png,
-# wharry_updown.png et wharry_cover.png (couverture déjà composée : pédale détourée, reflet, halo rouge) utilisée telle quelle.
+# Wharry (NINE HANDS | DSP) - notice PDF en français, illustrée avec le rendu réel du plugin (tools/render).
+# Usage : python3 tools/manual.py <dossier des captures de tools/render> <fichier PDF de sortie>
+# Couverture « minimale » commune à toutes les notices (gabarit fixe de la skill notice).
 import os, sys
+import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib import colors
 from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.enums import TA_CENTER
 from reportlab.platypus import (BaseDocTemplate, PageTemplate, Frame, Paragraph, Spacer, Image as RLImage,
                                 Table, TableStyle, PageBreak, NextPageTemplate, KeepTogether)
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SHOTS = sys.argv[1]
-OUT = sys.argv[2]
+SHOTS, OUT = sys.argv[1], sys.argv[2]
 VERSION = next(l.split("VERSION")[1].split()[0].strip(")") for l in open(os.path.join(ROOT, "CMakeLists.txt")) if l.startswith("project("))
-TMP = os.path.dirname(os.path.abspath(OUT))
+TMP = os.path.join(os.path.dirname(os.path.abspath(OUT)), "notice_tmp"); os.makedirs(TMP, exist_ok=True)
+FD = os.path.join(ROOT, "fonts")
+for n, f in (("Pop", "Poppins-Regular"), ("PopL", "Poppins-Light"), ("PopM", "Poppins-Medium"), ("PopB", "Poppins-Bold"),
+             ("Barlow", "BarlowCondensed-ExtraBold-ascii")):
+    pdfmetrics.registerFont(TTFont(n, os.path.join(FD, f + ".ttf")))
 
-for n, f in (("Pop", "Poppins-Regular"), ("PopL", "Poppins-Light"), ("PopM", "Poppins-Medium"), ("PopB", "Poppins-Bold")):
-    pdfmetrics.registerFont(TTFont(n, os.path.join(ROOT, "fonts", f + ".ttf")))
+ACC = colors.HexColor("#E0262F"); ACC_L = colors.HexColor("#FF7A6E")
+DARK = colors.HexColor("#1D1B1C"); GREY = colors.HexColor("#6B6466"); LIGHT = colors.HexColor("#F6EFEF")
+W_, H_ = A4
 
-RED = colors.HexColor("#B3141E"); DARK = colors.HexColor("#1D1B1C"); GREY = colors.HexColor("#6B6466"); LIGHT = colors.HexColor("#F4EEEE")
+# ---------------------------------------------------------------- illustrations (rendu réel du plugin)
+def load(n): return Image.open(os.path.join(SHOTS, n)).convert("RGB")
+mid = load("wharry_100pc_milieu.png"); k = mid.height / 900.0
+marks = [(1, 276, 430), (2, 595.6, 276.6), (3, 805.4, 267.8), (4, 860.4, 67.5), (5, 577.4, 518.1), (6, 719.9, 518.1),
+         (7, 862.4, 518.1), (8, 719.9, 629.1), (9, 719.8, 721.0), (10, 948, 455), (11, 27, 455)]
+ann = mid.copy(); dr = ImageDraw.Draw(ann)
+fnt = ImageFont.truetype(os.path.join(FD, "Poppins-Bold.ttf"), 17)
+for n, x, y in marks:
+    cx, cy, r = x * k, y * k, 13
+    dr.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(255, 255, 255), outline=(224, 38, 47), width=3)
+    dr.text((cx, cy + 1), str(n), font=fnt, fill=(224, 38, 47), anchor="mm")
+annotated = os.path.join(TMP, "annotated.png"); ann.save(annotated)
 
-import numpy as np
-# ---------- illustrations ----------
-# SHOTS = captures du plugin (tools/render : wharry_100pc_milieu / haute / basse.png) ou, si elles manquent, dossier contenant
-# les images déjà préparées : wharry_annotated.png, wharry_updown.png, wharry_cover_cutout.png (RGBA détourée).
-if os.path.exists(os.path.join(SHOTS, "wharry_100pc_milieu.png")):
-    src = Image.open(os.path.join(SHOTS, "wharry_100pc_milieu.png")).convert("RGB")
-    k = src.height / 928.0
-    marks = [  # (numéro, x, y) dans le repère 1020 x 928 du plugin
-        (1, 306, 455), (2, 616, 315), (3, 818, 250), (4, 884, 120), (5, 620, 531), (6, 737, 531), (7, 855, 528),
-        (8, 735, 746), (9, 840, 757), (10, 1000, 470), (11, 24, 470)]
-    ann = src.copy(); dr = ImageDraw.Draw(ann)
-    fnt = ImageFont.truetype(os.path.join(ROOT, "fonts", "Poppins-Bold.ttf"), 22)
-    for n, x, y in marks:
-        cx, cy, r = x * k, y * k, 17
-        dr.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(255, 255, 255), outline=(179, 20, 30), width=4)
-        dr.text((cx, cy + 1), str(n), font=fnt, fill=(179, 20, 30), anchor="mm")
-    annotated = os.path.join(TMP, "wharry_annotated.png"); ann.save(annotated)
-    # position haute / basse côte à côte
-    a = Image.open(os.path.join(SHOTS, "wharry_100pc_haute.png")).convert("RGB")
-    b = Image.open(os.path.join(SHOTS, "wharry_100pc_basse.png")).convert("RGB")
-    pa, pb = a.crop((0, 0, int(560 * k), a.height)), b.crop((0, 0, int(560 * k), b.height))
-    both = Image.new("RGB", (pa.width * 2 + 24, pa.height), (255, 255, 255)); both.paste(pa, (0, 0)); both.paste(pb, (pa.width + 24, 0))
-    updown = os.path.join(TMP, "wharry_updown.png"); both.save(updown)
-    # pédale détourée (masque de la silhouette généré par tools/design_art.py), plateau à plat
-    shot = Image.open(os.path.join(SHOTS, "wharry_100pc_basse.png")).convert("RGB")
-    msk = Image.open(os.path.join(ROOT, "design", "pedal_mask.png")).convert("L").resize(shot.size, Image.LANCZOS)
-    cut = Image.new("RGBA", shot.size, (0, 0, 0, 0)); cut.paste(shot, (0, 0), msk)
-    cut = cut.crop(cut.getbbox())
-else:
-    annotated = os.path.join(SHOTS, "wharry_annotated.png")
-    updown = os.path.join(SHOTS, "wharry_updown.png")
-    cut = None
-    if os.path.exists(os.path.join(SHOTS, "wharry_cover_cutout.png")):
-        cut = Image.open(os.path.join(SHOTS, "wharry_cover_cutout.png")).convert("RGBA")
-        cut = cut.crop(cut.getbbox())
-if cut is None:     # couverture déjà composée (tools/manual_assets/wharry_cover.png)
-    cover = os.path.join(SHOTS, "wharry_cover.png")
-else:
-    # couverture : pédale détourée sur fond noir, léger reflet au sol et halo rouge très doux qui retombe à zéro avant les bords
-    cw, ch = cut.size
-    pad = int(cw * 0.10)
-    canvas = Image.new("RGBA", (cw + 2 * pad, int(ch * 1.30) + pad), (0, 0, 0, 255))
-    yy, xx = np.mgrid[0:canvas.height, 0:canvas.width].astype(np.float64)
-    gcx, gcy = canvas.width / 2, pad + ch * 0.45
-    glow = np.exp(-(((xx - gcx) / (cw * 0.48)) ** 2 + ((yy - gcy) / (ch * 0.42)) ** 2)) * 38
-    edge = np.clip(np.minimum.reduce([xx, canvas.width - 1 - xx, yy, canvas.height - 1 - yy]) / (pad * 0.9), 0, 1)
-    glow *= edge ** 2
-    halo = np.dstack([glow * 1.0, glow * 0.10, glow * 0.12, np.full_like(glow, 255)]).astype(np.uint8)
-    canvas = Image.alpha_composite(canvas, Image.fromarray(halo, "RGBA"))
-    refl = cut.transpose(Image.FLIP_TOP_BOTTOM)
-    ra = np.array(refl).astype(np.float64)
-    fade = np.clip(1 - np.arange(refl.height) / (refl.height * 0.22), 0, 1) ** 1.6 * 0.22
-    ra[..., 3] *= fade[:, None]
-    canvas.alpha_composite(Image.fromarray(ra.astype(np.uint8), "RGBA"), (pad, pad + ch + 6))
-    canvas.alpha_composite(cut, (pad, pad))
-    canvas = canvas.crop((0, 0, canvas.width, pad + int(ch * 1.20)))
-    cover = os.path.join(TMP, "wharry_cover.png"); canvas.convert("RGB").save(cover)
+a, b = load("wharry_100pc_haute.png"), load("wharry_100pc_basse.png")
+cw_ = int(505 * k)
+pa, pb = a.crop((0, 0, cw_, a.height)), b.crop((0, 0, cw_, b.height))
+both = Image.new("RGB", (pa.width * 2 + 24, pa.height), (255, 255, 255)); both.paste(pa, (0, 0)); both.paste(pb, (pa.width + 24, 0))
+updown = os.path.join(TMP, "updown.png"); both.save(updown)
 
-def img(path, width):
-    im = Image.open(path); h = width * im.height / im.width
-    return RLImage(path, width=width, height=h)
+# couverture : pédale détourée (alpha du fond = boîtier + jacks), plateau à plat
+big = load("wharry_big_basse.png")
+alpha = Image.open(os.path.join(ROOT, "art", "background.png")).split()[3].resize(big.size, Image.LANCZOS)
+cut = Image.new("RGBA", big.size, (0, 0, 0, 0)); cut.paste(big, (0, 0), alpha); cut = cut.crop(cut.getbbox())
+cw, ch = cut.size; pad = int(cw * 0.16)
+canvas = Image.new("RGBA", (cw + 2 * pad, ch + 2 * pad), (0, 0, 0, 255))
+yy, xx = np.mgrid[0:canvas.height, 0:canvas.width].astype(np.float64)
+glow = np.exp(-(((xx - canvas.width / 2) / (cw * 0.50)) ** 2 + ((yy - (pad + ch * 0.48)) / (ch * 0.46)) ** 2)) * 40
+edge = np.clip(np.minimum.reduce([xx, canvas.width - 1 - xx, yy, canvas.height - 1 - yy]) / (pad * 0.9), 0, 1)
+glow *= edge ** 2
+canvas = Image.alpha_composite(canvas, Image.fromarray(np.dstack([glow, glow * 0.12, glow * 0.14, np.full_like(glow, 255)]).astype(np.uint8), "RGBA"))
+refl = cut.transpose(Image.FLIP_TOP_BOTTOM); ra = np.array(refl).astype(np.float64)
+ra[..., 3] *= (np.clip(1 - np.arange(refl.height) / (refl.height * 0.22), 0, 1) ** 1.6 * 0.22)[:, None]
+canvas.alpha_composite(Image.fromarray(ra.astype(np.uint8), "RGBA"), (pad, pad + ch + 6))
+canvas.alpha_composite(cut, (pad, pad))
+cover_img = os.path.join(TMP, "cover.png"); canvas.convert("RGB").save(cover_img)
+COVER_PX = (pad, pad, cw, ch, canvas.width, canvas.height)
 
-# ---------- styles ----------
+LOGO_W = os.path.join(TMP, "logo_white.png")
+if not os.path.exists(LOGO_W):
+    # rendu du SVG officiel (blanc) par Chromium
+    import subprocess, json
+    svg = open(os.path.join(ROOT, "NineHandsLogoWhite.svg")).read().replace("<svg ", '<svg width="2510" height="236" ', 1)
+    js = ("const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage();"
+          "await p.setViewportSize({width:2510,height:236});await p.setContent(%s);"
+          "await p.screenshot({path:%s,omitBackground:true});await b.close();})();") % (json.dumps(
+          '<html><body style="margin:0;background:transparent">' + svg + '</body></html>'), json.dumps(LOGO_W))
+    open(os.path.join(TMP, "logo.js"), "w").write(js)
+    subprocess.run(["node", os.path.join(TMP, "logo.js")], check=True)
+lg = Image.open(LOGO_W); lg.crop(lg.getbbox()).save(LOGO_W)
+
+# ---------------------------------------------------------------- styles
 st = {
-    "h1": ParagraphStyle("h1", fontName="PopB", fontSize=20, leading=24, textColor=RED, spaceAfter=8, spaceBefore=4, keepWithNext=1),
-    "h2": ParagraphStyle("h2", fontName="PopM", fontSize=13, leading=17, textColor=DARK, spaceAfter=4, spaceBefore=10, keepWithNext=1),
-    "p": ParagraphStyle("p", fontName="Pop", fontSize=9.6, leading=14, textColor=DARK, spaceAfter=5),
+    "h1": ParagraphStyle("h1", fontName="PopB", fontSize=19, leading=23, textColor=ACC, spaceAfter=8, spaceBefore=2, keepWithNext=1),
+    "h2": ParagraphStyle("h2", fontName="PopM", fontSize=12.5, leading=16, textColor=DARK, spaceAfter=3, spaceBefore=9, keepWithNext=1),
+    "p": ParagraphStyle("p", fontName="Pop", fontSize=9.5, leading=14, textColor=DARK, spaceAfter=5),
     "small": ParagraphStyle("small", fontName="Pop", fontSize=8.2, leading=11.5, textColor=GREY),
     "cell": ParagraphStyle("cell", fontName="Pop", fontSize=8.4, leading=11, textColor=DARK),
     "cellb": ParagraphStyle("cellb", fontName="PopM", fontSize=8.4, leading=11, textColor=DARK),
-    "cover": ParagraphStyle("cover", fontName="PopL", fontSize=40, leading=46, textColor=colors.white, alignment=TA_CENTER),
-    "coversub": ParagraphStyle("coversub", fontName="Pop", fontSize=12, leading=16, textColor=colors.HexColor("#BDB5B5"), alignment=TA_CENTER),
-    "coverlang": ParagraphStyle("coverlang", fontName="PopM", fontSize=8.5, leading=11, textColor=colors.HexColor("#E0262F")),
 }
 def P(t, s="p"): return Paragraph(t, st[s])
 def bullets(items): return [P("&bull;&nbsp;&nbsp;" + i) for i in items]
+def img(path, width):
+    im = Image.open(path); return RLImage(path, width=width, height=width * im.height / im.width)
 def table(rows, widths, header=True):
     data = [[P(c, "cellb" if (header and r == 0) else "cell") for c in row] for r, row in enumerate(rows)]
     t = Table(data, colWidths=widths, repeatRows=1 if header else 0)
     style = [("VALIGN", (0, 0), (-1, -1), "TOP"), ("LINEBELOW", (0, 0), (-1, -1), 0.3, colors.HexColor("#DDD4D4")),
              ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]
-    if header: style += [("BACKGROUND", (0, 0), (-1, 0), LIGHT), ("LINEBELOW", (0, 0), (-1, 0), 0.8, RED)]
+    if header: style += [("BACKGROUND", (0, 0), (-1, 0), LIGHT), ("LINEBELOW", (0, 0), (-1, 0), 0.8, ACC)]
     t.setStyle(TableStyle(style)); return t
 
-# ---------- données (identiques au code livré) ----------
+# ---------------------------------------------------------------- données (identiques au code livré)
 PROGRAMS = [
     ("Whammy", "2 OCT UP", "0", "+24"), ("Whammy", "OCT UP", "0", "+12"), ("Whammy", "5TH UP", "0", "+7"), ("Whammy", "4TH UP", "0", "+5"),
     ("Whammy", "2ND DN", "0", "-2"), ("Whammy", "4TH DN", "0", "-5"), ("Whammy", "5TH DN", "0", "-7"), ("Whammy", "OCT DN", "0", "-12"),
     ("Whammy", "2 OCT DN", "0", "-24"), ("Whammy", "DIVE BOMB", "0", "-36"),
-    ("Detune", "SHALLOW", "+10 c", "+10 c"), ("Detune", "DEEP", "+25 c", "+25 c"),
+    ("Detune", "SHALLOW", "10 cents", "10 cents"), ("Detune", "DEEP", "25 cents", "25 cents"),
     ("Harmony", "OCT DN / OCT UP", "-12", "+12"), ("Harmony", "5TH DN / 4TH DN", "-7", "-5"), ("Harmony", "5TH / 7TH", "+7", "+10"),
     ("Harmony", "5TH / 6TH", "+7", "+9"), ("Harmony", "4TH / 5TH", "+5", "+7"), ("Harmony", "3RD / 4TH", "+4", "+5"),
     ("Harmony", "b3RD / 3RD", "+3", "+4"), ("Harmony", "2ND / 3RD", "+2", "+4"), ("Harmony", "4TH DN / 3RD DN", "-5", "-4")]
-FACTORY = [  # nom, programme, moteur, glide, tone, mix
-    ("Octave Scream (2 Oct Up)", "2 OCT UP", "Classic", 20, 100, 100), ("Classic Octave Up", "OCT UP", "Classic", 25, 100, 100),
-    ("Power Fifth Rise", "5TH UP", "Chords", 30, 90, 100), ("Half-Step Drop (2nd Dn chords)", "2ND DN", "Chords", 40, 100, 100),
-    ("Seven-String Sub (Oct Dn chords)", "OCT DN", "Chords", 30, 80, 100), ("Doom Floor (2 Oct Dn chords)", "2 OCT DN", "Chords", 45, 70, 100),
-    ("Dive Bomb", "DIVE BOMB", "Classic", 15, 100, 100), ("Shallow Chorus (Detune)", "SHALLOW", "Classic", 60, 85, 90),
-    ("Deep Detune Wash", "DEEP", "Chords", 60, 80, 100), ("Octave Spread (Oct Dn/Oct Up)", "OCT DN / OCT UP", "Chords", 35, 90, 85),
-    ("Bass Fifth Bend (5th/7th)", "5TH / 7TH", "Classic", 30, 90, 90), ("Twin Lead Thirds (3rd/4th)", "3RD / 4TH", "Classic", 25, 100, 90),
-    ("Pedal Steel Bend (2nd/3rd)", "2ND / 3RD", "Classic", 50, 85, 90), ("Whammy Octave Down", "OCT DN", "Classic", 25, 100, 100)]
-FACT_DESC = {
-    "en": ["The famous two-octave scream, fast and raw.", "The classic octave-up bend for leads and riffs.", "Rising fifth on power chords, clean in Chords mode.",
-           "Instant half-step drop of the whole guitar, chord-friendly.", "Sub octave under chords: massive low end for the 7-string.",
-           "Two octaves down, slow glide: doom / drone floor.", "Three-octave dive, short glide for a wild drop.", "Light chorus-like doubling, the pedal doses the detuned voice.",
-           "Wide detune wash for clean arpeggios.", "Harmony sweeping from an octave below to an octave above.", "Fifth to seventh harmony bend, bluesy and dark.",
-           "Twin-guitar harmony moving from a third to a fourth.", "Pedal steel style bend from a second to a third.", "The classic one-octave dive, toe down = one octave below."],
-    "fr": ["Le fameux cri à deux octaves, rapide et brut.", "Le classique glissement d'une octave vers le haut pour solos et riffs.", "Quinte montante sur power chords, propre en mode Chords.",
-           "Descente instantanée d'un demi-ton de toute la guitare, adaptée aux accords.", "Octave grave sous les accords : bas énorme pour la 7 cordes.",
-           "Deux octaves plus bas, glissement lent : son doom / drone.", "Plongée de trois octaves, glissement court pour une chute sauvage.", "Doublage léger façon chorus, la pédale dose la voix désaccordée.",
-           "Large nappe désaccordée pour arpèges en son clair.", "Harmonie qui balaie d'une octave en dessous à une octave au-dessus.", "Harmonie quinte vers septième, bluesy et sombre.",
-           "Harmonie façon deux guitares, de la tierce à la quarte.", "Bend façon pedal steel, de la seconde à la tierce.", "La descente classique d'une octave : orteil enfoncé = une octave plus bas."]}
+FACTORY = [
+    ("Octave Scream (2 Oct Up)", "2 OCT UP", "Classic", 20, 100, 100, "Le fameux cri à deux octaves, rapide et brut."),
+    ("Classic Octave Up", "OCT UP", "Classic", 25, 100, 100, "Le glissement d'une octave vers le haut, pour solos et riffs."),
+    ("Power Fifth Rise", "5TH UP", "Chords", 30, 90, 100, "Quinte montante sur power chords, propre en mode Chords."),
+    ("Half-Step Drop (2nd Dn chords)", "2ND DN", "Chords", 40, 100, 100, "Toute la guitare descend d'un ton, accords compris."),
+    ("Seven-String Sub (Oct Dn chords)", "OCT DN", "Chords", 30, 80, 100, "Octave grave sous les accords : un bas énorme pour la 7 cordes."),
+    ("Doom Floor (2 Oct Dn chords)", "2 OCT DN", "Chords", 45, 70, 100, "Deux octaves plus bas, glissement lent : son doom / drone."),
+    ("Dive Bomb", "DIVE BOMB", "Classic", 15, 100, 100, "Plongée de trois octaves, glissement court pour une chute sauvage."),
+    ("Shallow Chorus (Detune)", "SHALLOW", "Classic", 60, 85, 90, "Doublage léger façon chorus, la pédale dose la voix désaccordée."),
+    ("Deep Detune Wash", "DEEP", "Chords", 60, 80, 100, "Large nappe désaccordée pour arpèges en son clair."),
+    ("Octave Spread (Oct Dn/Oct Up)", "OCT DN / OCT UP", "Chords", 35, 90, 85, "Harmonie qui va d'une octave en dessous à une octave au-dessus."),
+    ("Bass Fifth Bend (5th/7th)", "5TH / 7TH", "Classic", 30, 90, 90, "Harmonie de la quinte à la septième, bluesy et sombre."),
+    ("Twin Lead Thirds (3rd/4th)", "3RD / 4TH", "Classic", 25, 100, 90, "Harmonie façon deux guitares, de la tierce à la quarte."),
+    ("Pedal Steel Bend (2nd/3rd)", "2ND / 3RD", "Classic", 50, 85, 90, "Bend façon pedal steel, de la seconde à la tierce."),
+    ("Whammy Octave Down", "OCT DN", "Classic", 25, 100, 100, "La descente classique : orteil enfoncé = une octave plus bas.")]
 
-# ---------- textes ----------
-T = {
-"en": dict(
- lang="ENGLISH", sub="Pitch-shift expression pedal &nbsp;·&nbsp; VST3 for Windows and macOS", ver="User manual &nbsp;·&nbsp; version " + VERSION,
- intro_t="1. Introduction",
- intro=["<b>Wharry</b> is a NINE HANDS | DSP plugin that reproduces the behaviour of the DigiTech Whammy 5 pitch-shifting pedal: a rocker pedal that bends your notes up or down, adds a moving harmony, or a subtle detuned double.",
-        "It keeps the original logic (21 programs, Classic / Chords switch, MIDI control of the treadle, Program Change selection) and adds a few modern extras: GLIDE, TONE and MIX knobs, a live screen, a studio-quality chords engine, and a treadle that tilts on screen in real time with your MIDI expression pedal or DAW automation.",
-        "Sound: Classic mode has the fast, slightly gritty character of the original single-note Whammy; Chords mode keeps chords in tune while you bend them."],
- inst_t="2. Installation",
- inst=[("Windows", "Download the <b>Wharry-VST3-Windows</b> artifact from the Actions tab of the GitHub repository Nine-Hands-Dsp/wharry, unzip it and copy the <b>Wharry.vst3</b> folder into <b>C:\\Program Files\\Common Files\\VST3</b>."),
-       ("macOS", "Download <b>Wharry-VST3-macOS</b>, unzip it and copy <b>Wharry.vst3</b> into <b>~/Library/Audio/Plug-Ins/VST3</b> (or /Library/Audio/Plug-Ins/VST3 for all users). If macOS blocks it, run <b>xattr -cr ~/Library/Audio/Plug-Ins/VST3/Wharry.vst3</b> in the Terminal. The binary is universal (Apple Silicon and Intel)."),
-       ("Reaper", "Options &gt; Preferences &gt; Plug-ins &gt; VST &gt; <b>Re-scan</b>. The plugin appears as <b>Wharry (NINE HANDS | DSP)</b>. To control it with a MIDI pedal, make sure the track receives MIDI from your controller (record-arm or input monitoring with MIDI input set to your device).")],
- ov_t="3. Interface overview",
- ov_rows=[["#", "Control", "Role"],
-   ["1", "Treadle", "Expression pedal. Toe up = 0 %, toe down = 100 %. Moves with the mouse (drag down to press the toe, wheel, double-click = full up / full down), with a MIDI CC assigned by MIDI Learn and with DAW automation."],
-   ["2", "Program selector", "21 detents: 10 Whammy, 2 Detune, 9 Harmony programs. Drag up / down or use the mouse wheel."],
-   ["3", "Screen", "Engine, ON / BYPASS, preset name (or family) and number, previous / current / next program, live pitch offset, treadle travel bars and the status line. Click the previous / next program to step through the programs, click anywhere else (PRESETS) to open the preset list."],
-   ["4", "CLASSIC · CHORDS", "Pitch engine selector (single notes / chords)."],
-   ["5", "GLIDE", "Treadle smoothing, 0 to 250 ms (default 30 ms)."],
-   ["6", "TONE", "Low-pass filter on the shifted voice, 700 Hz to fully open (default 100 %)."],
-   ["7", "MIX", "Amount of effect (default 100 %)."],
-   ["8", "Footswitch", "Effect ON / OFF (short click-free crossfade); its cap goes down when pressed, by mouse or MIDI."],
-   ["9", "LED", "Lit when the effect is on."],
-   ["10", "IN", "Input jack (right side)."],
-   ["11", "OUT", "Output jack (left side)."]],
- ctl_t="4. Controls in detail",
- ctl=[("Treadle and programs", "In <b>Whammy</b> programs the signal is 100 % shifted: toe up gives the original pitch, toe down gives the full interval. In <b>Harmony</b> programs your dry note is kept and a second voice glides between the two intervals of the program (toe up = first interval, toe down = second). In <b>Detune</b> programs a slightly detuned voice is added to the dry signal and the treadle sets its level."),
-      ("GLIDE", "Smooths the treadle (and the MIDI controller). Low values feel immediate; higher values give slow, singing bends and hide the steps of 7-bit MIDI controllers. The treadle drawn on screen follows exactly the same smoothed position you hear."),
-      ("TONE", "Darkens the shifted voice only: useful to tame the fizz of 2 OCT UP or to make octave-down voices sit behind the guitar. The dry signal is never filtered."),
-      ("MIX", "Whammy programs: blends dry and shifted signal (100 % = original Whammy behaviour). Harmony / Detune programs: level of the added voice (0 % = dry only)."),
-      ("CLASSIC / CHORDS", "<b>Classic</b>: single-note engine locked on the detected pitch (down to about 35 Hz, so a 7-string tuned to G or lower tracks), very fast, with the slightly grainy Whammy character on chords. <b>Chords</b>: polyphonic engine, chords stay in tune, no latency. Right-click &gt; <b>Chords engine</b> &gt; <b>Studio HQ</b> uses a phase-vocoder engine with the cleanest result, at the cost of about 170 ms latency (reported to the DAW): for re-amping and mixing, not for live playing.")],
- fs_t="5. Footswitch, LED and expression pedal",
- fs=["<b>Footswitch</b>: click to switch the effect on or off; the cap goes down while pressed (also when switched by MIDI) and the LED shows the state. Switching programs or engines uses a short crossfade (no clicks).",
-     "<b>CLASSIC / CHORDS</b>: click the lever; it slides in its slot. The engine change is crossfaded.",
-     "<b>Treadle look</b>: the drawing follows the tilt with light and shadow: raised toe catches the light and casts a shadow, a soft reflection slides along the rubber, and the toe darkens when pressed down.",
-     "<b>Expression pedal</b>: no CC is assigned by default; once your pedal's CC is learnt (right-click the treadle › <b>MIDI Learn: Expression pedal</b>, or <b>MIDI learn pedal controller</b>), it moves the treadle directly, as on the original pedal. <b>The pedal direction is inverted by default</b> (right-click &gt; <b>Invert pedal direction</b> is ticked when the plugin opens): untick it if the treadle moves the wrong way with your pedal. Right-click the treadle or the enclosure: <b>MIDI learn pedal controller</b>, <b>Clear pedal MIDI</b>, <b>Invert pedal direction</b>, <b>Calibrate pedal</b>, <b>Reset pedal calibration</b>.",
-     "<b>Pedal range</b>: many expression pedals never send exactly 0 and 127 (an M-Audio EX-P on an M-Vave Chocolate Plus often sends about 2 to 116). Wharry learns the real range automatically the first time you press the pedal fully down and up, and adds a small dead zone at both ends: toe up is exactly 0, toe down exactly the full interval. If the pedal is linked through your DAW instead of a learnt CC, use <b>Calibrate pedal</b>: press it fully down and up; the calibration ends by itself (or choose <b>Finish pedal calibration</b>, or click the screen)."],
- midi_t="6. MIDI",
- midi=["<b>No CC is assigned by default</b>: every control is assigned with <b>MIDI Learn</b>. Right-click a control (the treadle, the program selector, GLIDE, TONE, MIX, the CLASSIC / CHORDS switch or the footswitch). The top of the menu shows <b>MIDI Learn: &lt;Name&gt; (CC n / none)</b> with the current assignment, <b>Clear MIDI: &lt;Name&gt;</b> and, while a learn is waiting, <b>Cancel MIDI learn</b>. Choose MIDI Learn, then move a pedal, a knob or press a footswitch of your controller: the status line of the screen shows <b>MIDI LEARN: move a control for &lt;Name&gt;</b>, then <b>&lt;Name&gt; = CC n</b> for 2 seconds.",
-       "Right-click outside the controls (for example on the enclosure) to open the usual menu with a <b>MIDI</b> submenu: <b>Learn</b> for each of the 7 controls (with its current assignment), <b>Cancel MIDI learn</b> (while a learn is waiting) and <b>Clear all MIDI assignments</b> (CCs and notes). Choosing the pending item again also cancels the learn.",
-       "A CC number can only drive one control: learning a CC that is already used removes it from the other control. Learn accepts CC 0 to 119; the CLASSIC / CHORDS switch and the footswitch can also learn a MIDI <b>note</b>. Wharry listens on all MIDI channels. <b>Assignments are saved with the project</b> (and with DAW presets). A project made with an older version that still had the former factory assignment opens with no assignment; a project in which you had changed an assignment keeps its assignments."],
- midi_hdr=["Control", "Type"],
- midi_rows=[["Expression pedal (treadle)", "Continuous 0-127 (toe up to toe down), with auto range, calibration and inversion (on by default)"],
-            ["Program selector", "21-position selector: the 0-127 travel is split into 21 equal zones (programs 1 to 21)"],
-            ["Glide", "Continuous 0-127 = 0 to 250 ms"], ["Tone", "Continuous 0-127 = 0-100 %"], ["Mix", "Continuous 0-127 = 0-100 %"],
-            ["CLASSIC / CHORDS switch", "Momentary footswitch (CC or note): each press (CC 64 or more, or note on) toggles"],
-            ["ON / OFF footswitch", "Momentary footswitch (CC or note): each press (CC 64 or more, or note on) toggles"]],
- midi2=["<b>Program Change</b> (right-click &gt; <b>Respond to MIDI Program Change</b>, on by default), same logic as the Whammy 5: PC 1-21 = programs 1-21 in Classic, PC 22-42 = same programs bypassed, PC 43-63 = Chords, PC 64-84 = Chords bypassed.",
-        "<b>M-Vave Chocolate Plus</b>: plug your expression pedal into its EXP input and MIDI-learn the treadle with it; learn one footswitch on the Wharry footswitch and another one on CLASSIC / CHORDS.",
-        "Every control is also a DAW parameter: Program (selector), Expression Pedal, Classic / Chords (switch), Effect On (footswitch), Chords Studio HQ engine, Glide, Tone, Mix, Pedal Calibration Heel / Toe, MIDI Pedal Invert, Respond to MIDI Program Change; all can be automated in Reaper."],
- win_t="7. Window",
- win=["Wharry uses the double pedal format with the same window heights as Ring Think. Right-click &gt; <b>Plugin size</b>: <b>60 %</b>, <b>75 %</b>, <b>100 %</b> for this window, with “(default)” next to the default size. Below them, <b>Default size (new windows)</b> chooses the opening size of every new Wharry window: a setting common to all instances and saved on the computer; the open window takes that size too. A size chosen in this menu for an instance is saved with the project and takes priority over the default size when the project is reopened; an instance with no size of its own opens at the default size. You can also drag the bottom-right corner (proportions are kept). The window can never be made smaller than <b>60 %</b>.",
-      "The <b>status line</b> at the bottom of the screen shows the live values: pedal position, GLIDE, TONE, MIX (and the latency in Studio HQ), or the instructions during a calibration or a MIDI learn."],
- pre_t="8. Presets",
- pre=["Click the screen (or use the preset menu of your DAW) to load one of the 21 original programs or one of the 14 NINE HANDS | DSP factory presets:"],
- prog_t="Original programs",
- prog_hdr=["#", "Family", "Program", "Toe up", "Toe down"],
- fac_hdr=["Preset", "Program", "Engine", "Glide / Tone / Mix", "Description"],
- tips_t="9. Tips",
- tips=["In Reaper place Wharry <b>before</b> your amp simulator (for example before Ampire, followed by Impulse for the cab): pitch shifting a clean guitar signal sounds far better than shifting distortion.",
-       "7-string tuned to G or lower: Classic tracks single notes down to about 35 Hz; for low chords use Chords (live) or Studio HQ when re-amping.",
-       "For dive bombs and octave sweeps raise GLIDE (60-120 ms); for rhythmic 'Morello' style switching keep it low (0-20 ms).",
-       "Use TONE around 70-85 % on 2 OCT UP to soften the high octave.",
-       "Learn the program selector on a knob of your controller to sweep through the 21 programs live."],
- tech_t="10. Specifications",
- tech=[["Format", "VST3 (Windows 64-bit, macOS universal), AU also built on macOS"], ["Version", VERSION],
-       ["Channels", "Mono or stereo in, mono or stereo out (the input is summed to mono)"],
-       ["Latency", "0 samples (Classic, Chords live) · about 170 ms (Chords Studio HQ, reported to the DAW)"], ["Pitch tracking", "about 35 Hz to 1500 Hz (Classic)"],
-       ["Range", "up to +2 octaves / -3 octaves"],
-       ["MIDI", "MIDI Learn on all 7 controls (no default assignment, saved with the project), expression pedal inverted by default, notes for the switches, Program Change 1-84 (Whammy 5 map), all channels"],
-       ["Window", "Plugin size 60 % (minimum), 75 %, 100 %, default size of new windows selectable; anti-freeze v2 on Windows (display caches rebuilt by a timer, watchdog that restarts drawing, no call to the host from the audio thread)"],
-       ["CPU", "about 2 % of one core at 48 kHz"]],
- updown_cap="Treadle toe up (left) and toe down (right): the drawing follows the MIDI pedal and automation in real time.",
- spec_h=["", ""]),
-"fr": dict(
- lang="FRANÇAIS", sub="Pédale d'expression de transposition &nbsp;·&nbsp; VST3 pour Windows et macOS", ver="Notice d'utilisation &nbsp;·&nbsp; version " + VERSION,
- intro_t="1. Présentation",
- intro=["<b>Wharry</b> est un plugin NINE HANDS | DSP qui reproduit le fonctionnement de la pédale de transposition DigiTech Whammy 5 : une pédale à bascule qui fait glisser vos notes vers le haut ou le bas, ajoute une harmonie mobile ou un léger doublage désaccordé.",
-        "Il garde la logique d'origine (21 programmes, commutateur Classic / Chords, pilotage du plateau en MIDI, sélection par Program Change) et ajoute quelques plus : boutons GLIDE, TONE et MIX, écran en direct, moteur d'accords qualité studio, et un plateau qui bascule à l'écran en temps réel avec votre pédale d'expression MIDI ou les automations du DAW.",
-        "Son : le mode Classic a le caractère rapide et un peu granuleux de la Whammy d'origine sur notes seules ; le mode Chords garde les accords justes pendant le glissement."],
- inst_t="2. Installation",
- inst=[("Windows", "Téléchargez l'artefact <b>Wharry-VST3-Windows</b> dans l'onglet Actions du dépôt GitHub Nine-Hands-Dsp/wharry, décompressez-le et copiez le dossier <b>Wharry.vst3</b> dans <b>C:\\Program Files\\Common Files\\VST3</b>."),
-       ("macOS", "Téléchargez <b>Wharry-VST3-macOS</b>, décompressez-le et copiez <b>Wharry.vst3</b> dans <b>~/Bibliothèque/Audio/Plug-Ins/VST3</b> (ou /Bibliothèque/Audio/Plug-Ins/VST3 pour tous les utilisateurs). Si macOS le bloque, tapez <b>xattr -cr ~/Library/Audio/Plug-Ins/VST3/Wharry.vst3</b> dans le Terminal. Le binaire est universel (Apple Silicon et Intel)."),
-       ("Reaper", "Options &gt; Préférences &gt; Plug-ins &gt; VST &gt; <b>Re-scan</b>. Le plugin apparaît sous le nom <b>Wharry (NINE HANDS | DSP)</b>. Pour le piloter avec une pédale MIDI, la piste doit recevoir le MIDI de votre contrôleur (armement ou monitoring d'entrée avec l'entrée MIDI réglée sur votre appareil).")],
- ov_t="3. Vue d'ensemble de l'interface",
- ov_rows=[["#", "Commande", "Rôle"],
-   ["1", "Plateau", "Pédale d'expression. Orteil levé = 0 %, orteil enfoncé = 100 %. Se déplace à la souris (tirer vers le bas = appuyer sur la pointe, molette, double-clic = tout en haut / tout en bas), avec un CC MIDI assigné par MIDI Learn et avec les automations du DAW."],
-   ["2", "Sélecteur de programme", "21 crans : 10 programmes Whammy, 2 Detune, 9 Harmony. Glisser vers le haut / le bas ou utiliser la molette."],
-   ["3", "Écran", "Moteur, ON / BYPASS, nom du preset (ou famille) et numéro, programme précédent / actuel / suivant, décalage en direct, barres de course du plateau et ligne d'état. Un clic sur le programme précédent / suivant change de programme ; un clic ailleurs (PRESETS) ouvre la liste des presets."],
-   ["4", "CLASSIC · CHORDS", "Choix du moteur de transposition (notes seules / accords)."],
-   ["5", "GLIDE", "Lissage du plateau, de 0 à 250 ms (30 ms par défaut)."],
-   ["6", "TONE", "Filtre passe-bas sur la voix transposée, de 700 Hz à grand ouvert (100 % par défaut)."],
-   ["7", "MIX", "Dosage de l'effet (100 % par défaut)."],
-   ["8", "Footswitch", "Effet ON / OFF (fondu court sans clic) ; son chapeau s'enfonce à l'appui, à la souris comme en MIDI."],
-   ["9", "LED", "Allumée quand l'effet est actif."],
-   ["10", "IN", "Jack d'entrée (côté droit)."],
-   ["11", "OUT", "Jack de sortie (côté gauche)."]],
- ctl_t="4. Les commandes en détail",
- ctl=[("Plateau et programmes", "Dans les programmes <b>Whammy</b>, le signal est transposé à 100 % : orteil levé = hauteur d'origine, orteil enfoncé = intervalle complet. Dans les programmes <b>Harmony</b>, la note sèche est conservée et une deuxième voix glisse entre les deux intervalles du programme (orteil levé = premier intervalle, orteil enfoncé = second). Dans les programmes <b>Detune</b>, une voix légèrement désaccordée s'ajoute au son sec et le plateau règle son niveau."),
-      ("GLIDE", "Lisse le plateau (et le contrôleur MIDI). Valeurs faibles = réponse immédiate ; valeurs élevées = glissements lents et chantants, et disparition des « marches » des contrôleurs MIDI 7 bits. Le plateau dessiné suit exactement la même position lissée que celle que vous entendez."),
-      ("TONE", "Assombrit uniquement la voix transposée : pratique pour adoucir le grésillement du 2 OCT UP ou placer une octave grave derrière la guitare. Le signal sec n'est jamais filtré."),
-      ("MIX", "Programmes Whammy : mélange son sec / son transposé (100 % = comportement de la Whammy d'origine). Programmes Harmony / Detune : niveau de la voix ajoutée (0 % = son sec seul)."),
-      ("CLASSIC / CHORDS", "<b>Classic</b> : moteur pour notes seules calé sur la hauteur détectée (jusqu'à environ 35 Hz, donc une 7 cordes accordée en G ou plus bas est suivie), très rapide, avec le caractère un peu granuleux de la Whammy sur les accords. <b>Chords</b> : moteur polyphonique, accords justes, sans latence. Clic droit &gt; <b>Chords engine</b> &gt; <b>Studio HQ</b> : moteur à vocodeur de phase, résultat le plus propre, avec environ 170 ms de latence (annoncée au DAW) : pour le ré-amping et le mixage, pas pour jouer en direct.")],
- fs_t="5. Footswitch, LED et pédale d'expression",
- fs=["<b>Footswitch</b> : un clic active ou coupe l'effet ; le chapeau s'enfonce pendant l'appui (aussi quand il est commandé en MIDI) et la LED indique l'état. Les changements de programme ou de moteur se font avec un fondu court (pas de clic).",
-     "<b>CLASSIC / CHORDS</b> : cliquez sur le levier, il coulisse dans sa fente. Le changement de moteur se fait en fondu.",
-     "<b>Rendu du plateau</b> : le dessin suit l'inclinaison avec lumière et ombres : la pointe levée prend la lumière et projette une ombre, un reflet doux glisse sur le caoutchouc, et la pointe s'assombrit quand elle est enfoncée.",
-     "<b>Pédale d'expression</b> : aucun CC n'est assigné par défaut ; une fois le CC de votre pédale appris (clic droit sur le plateau › <b>MIDI Learn: Expression pedal</b>, ou <b>MIDI learn pedal controller</b>), il déplace directement le plateau, comme sur la pédale d'origine. <b>Le sens de la pédale est inversé par défaut</b> (clic droit &gt; <b>Invert pedal direction</b> est coché à l'ouverture du plugin) : décochez-le si le plateau part dans le mauvais sens avec votre pédale. Clic droit sur le plateau ou le boîtier : <b>MIDI learn pedal controller</b>, <b>Clear pedal MIDI</b>, <b>Invert pedal direction</b>, <b>Calibrate pedal</b>, <b>Reset pedal calibration</b>.",
-     "<b>Course de la pédale</b> : beaucoup de pédales d'expression n'envoient jamais exactement 0 et 127 (une M-Audio EX-P sur une M-Vave Chocolate Plus envoie souvent environ 2 à 116). Wharry apprend tout seul la course réelle dès que vous enfoncez puis relevez la pédale à fond, et ajoute une petite zone morte aux deux butées : pédale relevée = exactement 0, enfoncée = exactement l'intervalle complet. Si la pédale est liée par le DAW au lieu d'un CC appris, utilisez <b>Calibrate pedal</b> : enfoncez-la puis relevez-la à fond ; la calibration se termine seule (ou choisissez <b>Finish pedal calibration</b>, ou cliquez sur l'écran)."],
- midi_t="6. MIDI",
- midi=["<b>Aucun CC n'est assigné par défaut</b> : chaque commande s'assigne par <b>MIDI Learn</b>. Faites un clic droit sur une commande (le plateau, le sélecteur de programme, GLIDE, TONE, MIX, l'inverseur CLASSIC / CHORDS ou le footswitch). Le haut du menu affiche <b>MIDI Learn: &lt;Nom&gt; (CC n / none)</b> avec l'assignation actuelle, <b>Clear MIDI: &lt;Nom&gt;</b> et, tant qu'un apprentissage est en attente, <b>Cancel MIDI learn</b>. Choisissez MIDI Learn puis bougez une pédale, un bouton ou appuyez sur un footswitch de votre contrôleur : la ligne d'état de l'écran affiche <b>MIDI LEARN: move a control for &lt;Nom&gt;</b>, puis <b>&lt;Nom&gt; = CC n</b> pendant 2 secondes.",
-       "Un clic droit hors des commandes (par exemple sur le boîtier) ouvre le menu habituel avec un sous-menu <b>MIDI</b> : <b>Learn</b> pour chacune des 7 commandes (avec son assignation actuelle), <b>Cancel MIDI learn</b> (pendant une attente) et <b>Clear all MIDI assignments</b> (CC et notes). Choisir de nouveau la commande en attente annule aussi l'apprentissage.",
-       "Un numéro de CC ne pilote qu'une seule commande : apprendre un CC déjà utilisé le retire de l'autre commande. L'apprentissage accepte les CC 0 à 119 ; l'inverseur CLASSIC / CHORDS et le footswitch peuvent aussi apprendre une <b>note</b> MIDI. Wharry écoute tous les canaux MIDI. <b>Les assignations sont sauvegardées avec le projet</b> (et avec les presets du DAW). Un projet fait avec une version antérieure qui avait encore l'ancienne assignation d'usine s'ouvre sans assignation ; un projet où vous aviez changé une assignation garde ses assignations."],
- midi_hdr=["Commande", "Type"],
- midi_rows=[["Expression pedal (plateau)", "Continu 0-127 (orteil levé à orteil enfoncé), avec course automatique, calibration et inversion (active par défaut)"],
-            ["Program selector", "Sélecteur à 21 positions : la course 0-127 est découpée en 21 zones égales (programmes 1 à 21)"],
-            ["Glide", "Continu 0-127 = 0 à 250 ms"], ["Tone", "Continu 0-127 = 0-100 %"], ["Mix", "Continu 0-127 = 0-100 %"],
-            ["CLASSIC / CHORDS switch", "Footswitch momentané (CC ou note) : chaque appui (CC à 64 ou plus, ou note) bascule"],
-            ["ON / OFF footswitch", "Footswitch momentané (CC ou note) : chaque appui (CC à 64 ou plus, ou note) bascule"]],
- midi2=["<b>Program Change</b> (clic droit &gt; <b>Respond to MIDI Program Change</b>, actif par défaut), même logique que la Whammy 5 : PC 1-21 = programmes 1-21 en Classic, PC 22-42 = mêmes programmes en bypass, PC 43-63 = Chords, PC 64-84 = Chords en bypass.",
-        "<b>M-Vave Chocolate Plus</b> : branchez votre pédale d'expression sur son entrée EXP et faites avec elle un MIDI Learn du plateau ; apprenez un footswitch sur le footswitch de Wharry et un autre sur CLASSIC / CHORDS.",
-        "Chaque commande est aussi un paramètre du DAW : Program (selector), Expression Pedal, Classic / Chords (switch), Effect On (footswitch), Chords Studio HQ engine, Glide, Tone, Mix, Pedal Calibration Heel / Toe, MIDI Pedal Invert, Respond to MIDI Program Change ; tous automatisables dans Reaper."],
- win_t="7. Fenêtre",
- win=["Wharry utilise le format pédale double avec les mêmes hauteurs de fenêtre que Ring Think. Clic droit &gt; <b>Plugin size</b> : <b>60 %</b>, <b>75 %</b>, <b>100 %</b> pour cette fenêtre, avec « (default) » à côté de la taille par défaut. En dessous, <b>Default size (new windows)</b> choisit la taille d'ouverture de toutes les nouvelles fenêtres de Wharry : réglage commun à toutes les instances, enregistré sur l'ordinateur ; la fenêtre ouverte prend aussi cette taille. Une taille choisie dans ce menu pour une instance est sauvegardée avec le projet et reste prioritaire sur la taille par défaut à sa réouverture ; une instance sans taille propre s'ouvre à la taille par défaut. On peut aussi tirer le coin en bas à droite (les proportions sont conservées). La fenêtre ne peut jamais être réduite sous <b>60 %</b>.",
-      "La <b>ligne d'état</b>, en bas de l'écran, affiche les valeurs en direct : position de la pédale, GLIDE, TONE, MIX (et la latence en Studio HQ), ou les consignes pendant une calibration ou un MIDI Learn."],
- pre_t="8. Presets",
- pre=["Cliquez sur l'écran (ou utilisez le menu de presets de votre DAW) pour charger l'un des 21 programmes d'origine ou l'un des 14 presets usine NINE HANDS | DSP :"],
- prog_t="Programmes d'origine",
- prog_hdr=["#", "Famille", "Programme", "Orteil levé", "Orteil enfoncé"],
- fac_hdr=["Preset", "Programme", "Moteur", "Glide / Tone / Mix", "Description"],
- tips_t="9. Conseils d'utilisation",
- tips=["Dans Reaper, placez Wharry <b>avant</b> votre simulateur d'ampli (par exemple avant Ampire, suivi d'Impulse pour le baffle) : transposer un son clair est bien plus propre que transposer une distorsion.",
-       "7 cordes accordée en G ou plus bas : le mode Classic suit les notes seules jusqu'à environ 35 Hz ; pour les accords graves, utilisez Chords (live) ou Studio HQ en ré-amping.",
-       "Pour les dive bombs et les balayages d'octave, montez GLIDE (60-120 ms) ; pour des changements rythmiques secs, gardez-le bas (0-20 ms).",
-       "Réglez TONE vers 70-85 % sur 2 OCT UP pour adoucir l'octave haute.",
-       "Apprenez le sélecteur de programme sur un bouton de votre contrôleur pour parcourir les 21 programmes en direct."],
- tech_t="10. Caractéristiques techniques",
- tech=[["Format", "VST3 (Windows 64 bits, macOS universel), AU également compilé sur macOS"], ["Version", VERSION],
-       ["Canaux", "Entrée mono ou stéréo, sortie mono ou stéréo (l'entrée est sommée en mono)"],
-       ["Latence", "0 échantillon (Classic, Chords live) · environ 170 ms (Chords Studio HQ, annoncée au DAW)"], ["Suivi de hauteur", "d'environ 35 Hz à 1500 Hz (Classic)"],
-       ["Plage", "jusqu'à +2 octaves / -3 octaves"],
-       ["MIDI", "MIDI Learn sur les 7 commandes (aucune assignation par défaut, sauvegardé avec le projet), pédale d'expression inversée par défaut, notes pour les commutateurs, Program Change 1-84 (table de la Whammy 5), tous canaux"],
-       ["Fenêtre", "Plugin size 60 % (minimum), 75 %, 100 %, taille par défaut des nouvelles fenêtres au choix ; anti-gel v2 sous Windows (caches d'affichage refaits par un timer, chien de garde qui relance le dessin, aucun appel à l'hôte depuis le thread audio)"],
-       ["Processeur", "environ 2 % d'un cœur à 48 kHz"]],
- updown_cap="Plateau orteil levé (à gauche) et orteil enfoncé (à droite) : le dessin suit la pédale MIDI et les automations en temps réel.",
- spec_h=["", ""]),
-}
-
-W = A4[0] - 36 * mm
-def section(lang):
-    t = T[lang]; f = []
-    # couverture (page noire, pédale détourée)
-    f.append(NextPageTemplate("p"))
-    f.append(Spacer(1, 6 * mm))
-    f.append(P(t["lang"], "coverlang"))
-    f.append(Spacer(1, 6 * mm))
-    f.append(img(cover, W * 0.92))
-    f.append(Spacer(1, 6 * mm))
-    f.append(P("W H A R R Y", "cover"))
-    f.append(P(t["sub"], "coversub"))
-    f.append(Spacer(1, 2 * mm))
-    f.append(P(t["ver"], "coversub"))
-    f.append(Spacer(1, 6 * mm))
-    f.append(img(os.path.join(ROOT, "logo_studio_wiga_blanc.png"), 52 * mm))
-    f.append(PageBreak())
-    f.append(P(t["intro_t"], "h1")); f += [P(x) for x in t["intro"]]
-    f.append(P(t["inst_t"], "h1"))
-    for h, x in t["inst"]: f.append(P(h, "h2")); f.append(P(x))
-    f.append(PageBreak())
-    f.append(P(t["ov_t"], "h1")); f.append(img(annotated, W * 0.82)); f.append(Spacer(1, 3 * mm))
-    f.append(table(t["ov_rows"], [10 * mm, 38 * mm, W - 48 * mm]))
-    f.append(PageBreak())
-    f.append(P(t["ctl_t"], "h1"))
-    for h, x in t["ctl"]: f.append(P(h, "h2")); f.append(P(x))
-    f.append(KeepTogether([Spacer(1, 3 * mm), img(updown, W * 0.56), P(t["updown_cap"], "small")]))
-    f.append(P(t["fs_t"], "h1")); f += bullets(t["fs"])
-    f.append(P(t["midi_t"], "h1")); f += [P(x) for x in t["midi"]]
-    f.append(Spacer(1, 2 * mm)); f.append(KeepTogether([table([t["midi_hdr"]] + t["midi_rows"], [48 * mm, W - 48 * mm])])); f.append(Spacer(1, 3 * mm))
-    f += bullets(t["midi2"])
-    f.append(P(t["win_t"], "h1")); f += [P(x) for x in t["win"]]
-    f.append(PageBreak())
-    f.append(P(t["pre_t"], "h1")); f += [P(x) for x in t["pre"]]
-    f.append(P(t["prog_t"], "h2"))
-    rows = [t["prog_hdr"]] + [[str(i + 1), fam, nm, up, dn] for i, (fam, nm, up, dn) in enumerate(PROGRAMS)]
-    f.append(table(rows, [10 * mm, 24 * mm, 46 * mm, 30 * mm, 30 * mm]))
-    f.append(Spacer(1, 2 * mm)); f.append(P("st = semitones / demi-tons · c = cents", "small"))
-    f.append(PageBreak())
-    f.append(P("NINE HANDS | DSP factory presets" if lang == "en" else "Presets usine NINE HANDS | DSP", "h2"))
-    rows = [t["fac_hdr"]] + [[n, pr, eng, f"{g} ms · {to} % · {mx} %", FACT_DESC[lang][i]] for i, (n, pr, eng, g, to, mx) in enumerate(FACTORY)]
-    f.append(table(rows, [40 * mm, 27 * mm, 17 * mm, 37 * mm, W - 121 * mm]))
-    f.append(P(t["tips_t"], "h1")); f += bullets(t["tips"])
-    f.append(KeepTogether([P(t["tech_t"], "h1"), table(t["tech"], [34 * mm, W - 34 * mm], header=False)]))
-    f.append(PageBreak())
-    return f
-
-# logo NINE HANDS | DSP en foncé pour les pages blanches
-lg = Image.open(os.path.join(ROOT, "logo_studio_wiga_blanc.png")).convert("RGBA")
-la = np.array(lg); la[..., :3] = (29, 27, 28); Image.fromarray(la).save(os.path.join(TMP, "logo_dark.png"))
-
-def deco(c, doc):
+# ---------------------------------------------------------------- pages
+def cover(c, doc):
     c.saveState()
-    c.setFillColor(RED); c.rect(0, A4[1] - 6 * mm, A4[0], 6 * mm, stroke=0, fill=1)
+    c.setFillColor(colors.black); c.rect(0, 0, W_, H_, stroke=0, fill=1)
+    c.setFillColor(ACC); c.rect(0, 0, W_, 3 * mm, stroke=0, fill=1)                         # bandeau bas
+    c.setFillColor(ACC_L); c.setFont("PopM", 8.5)
+    c.drawCentredString(W_ / 2, H_ - 18 * mm - 8.5 * 0.74, "FRANÇAIS")
+    # pédale : boîtier + jacks de 82 mm de haut (max 115 mm de large), haut à 84 mm
+    pad, padT, cw, ch, iw, ih = COVER_PX
+    ph = 82 * mm; pw = ph * cw / ch
+    if pw > 115 * mm: pw = 115 * mm; ph = pw * ch / cw
+    sc = ph / ch
+    x0 = W_ / 2 - (pad + cw / 2) * sc; ytop = H_ - 84 * mm + padT * sc
+    c.drawImage(cover_img, x0, ytop - ih * sc, width=iw * sc, height=ih * sc)
+    # nom
+    name = "WHARRY"; fs = 30; sp = 0.5 * fs
+    tw = pdfmetrics.stringWidth(name, "Barlow", fs) + sp * (len(name) - 1)
+    t = c.beginText(); t.setFont("Barlow", fs); t.setCharSpace(sp); t.setFillColor(colors.white)
+    t.setTextOrigin(W_ / 2 - tw / 2, H_ - 194 * mm - fs * 0.70); t.textOut(name); c.drawText(t)
+    # mention courte
+    sub = "Pitch shift et harmonies"; fs2 = 10; sp2 = 1.5
+    tw2 = pdfmetrics.stringWidth(sub, "Pop", fs2) + sp2 * (len(sub) - 1)
+    t = c.beginText(); t.setFont("Pop", fs2); t.setCharSpace(sp2); t.setFillColor(colors.HexColor("#BDC4B8"))
+    t.setTextOrigin(W_ / 2 - tw2 / 2, H_ - 208 * mm - fs2 * 0.74); t.textOut(sub); c.drawText(t)
+    # logo blanc 38 mm, bas à 22 mm
+    lim = Image.open(LOGO_W); lw = 38 * mm; lh = lw * lim.height / lim.width
+    c.drawImage(LOGO_W, W_ / 2 - lw / 2, 22 * mm, width=lw, height=lh, mask="auto")
+    c.setTitle("Wharry - Notice"); c.setAuthor("NINE HANDS | DSP"); c.setSubject("Notice de la pédale Wharry")
+    c.restoreState()
+
+def inner(c, doc):
+    c.saveState()
+    c.setFillColor(ACC); c.rect(0, H_ - 4, W_, 4, stroke=0, fill=1)
     c.setFont("Pop", 7.5); c.setFillColor(GREY)
-    c.drawString(18 * mm, 10 * mm, "Wharry (NINE HANDS | DSP) · v" + VERSION)
-    c.drawRightString(A4[0] - 18 * mm, 10 * mm, str(doc.page))
+    c.drawString(18 * mm, 10 * mm, "NINE HANDS | DSP  ·  Wharry v%s" % VERSION)
+    c.drawRightString(W_ - 18 * mm, 10 * mm, str(doc.page))
     c.restoreState()
 
 doc = BaseDocTemplate(OUT, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=16 * mm, bottomMargin=18 * mm,
-                      title="Wharry - Manual / Notice v" + VERSION, author="NINE HANDS | DSP")
-def cover_bg(c, doc):
-    c.saveState(); c.setFillColor(colors.black); c.rect(0, 0, A4[0], A4[1], stroke=0, fill=1)
-    c.setFillColor(RED); c.rect(0, A4[1] - 3 * mm, A4[0], 3 * mm, stroke=0, fill=1); c.restoreState()
-fr_ = Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id="f")
-doc.addPageTemplates([PageTemplate(id="cover", frames=[fr_], onPage=cover_bg),
-                      PageTemplate(id="p", frames=[Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id="f2")], onPage=deco)])
-en = section("en"); fr = section("fr")
-en[-1:] = [NextPageTemplate("cover"), PageBreak()]      # la partie française commence aussi par une couverture noire
-story = en + fr[:-1]
-doc.build(story)
+                      title="Wharry - Notice", author="NINE HANDS | DSP")
+fr = Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id="f")
+doc.addPageTemplates([PageTemplate("cover", frames=[fr], onPage=cover), PageTemplate("inner", frames=[fr], onPage=inner)])
+CW = doc.width
+S = [NextPageTemplate("inner"), PageBreak()]
+
+S += [P("Présentation", "h1"),
+      P("Wharry reproduit le fonctionnement de la DigiTech Whammy 5 : une pédale d'expression qui transpose la guitare en temps réel, "
+        "du simple bend d'un demi-ton jusqu'à la plongée de trois octaves, plus des effets de désaccord (Detune) et des harmonies à deux voix (Harmony)."),
+      P("Comme sur l'original, l'inverseur <b>CLASSIC / CHORDS</b> choisit entre un moteur très réactif pour les notes seules (le caractère criard du Whammy) "
+        "et un moteur pensé pour les accords. Wharry ajoute un moteur Chords <b>Studio HQ</b> plus précis (avec latence, pour le mixage ou le re-amping), "
+        "un suivi des notes jusqu'à ~35 Hz (7 cordes en G et plus bas) et des réglages GLIDE, TONE et MIX."),
+      P("La pédale se pilote à la souris, par automation dans le DAW, ou avec une vraie pédale d'expression MIDI (M-Vave Chocolate Plus par exemple) : "
+        "le plateau bascule à l'écran en même temps que votre pied."),
+      P("Installation", "h1"),
+      P("<b>Windows</b> : décompressez Wharry-VST3-Windows.zip et copiez <b>Wharry.vst3</b> dans <i>C:\\Program Files\\Common Files\\VST3</i>."),
+      P("<b>macOS</b> : décompressez Wharry-VST3-macOS.zip et copiez <b>Wharry.vst3</b> dans <i>~/Library/Audio/Plug-Ins/VST3</i> "
+        "(version Audio Unit dans <i>~/Library/Audio/Plug-Ins/Components</i> si elle est fournie). Au premier lancement, autorisez le plugin dans Réglages Système > Confidentialité et sécurité si macOS le demande."),
+      P("<b>Reaper</b> : Options > Preferences > Plug-ins > VST > <i>Re-scan</i>. Le plugin apparaît sous le nom <b>Wharry (NINE HANDS | DSP)</b>. "
+        "Pour piloter la pédale en MIDI, la piste doit recevoir l'entrée MIDI de votre pédalier (armement et monitoring activés, entrée MIDI choisie).")]
+
+S += [PageBreak(), P("Vue d'ensemble", "h1"), img(annotated, CW * 0.86), Spacer(1, 4),
+      table([["N°", "Élément", "Rôle"],
+             ["1", "Pédale d'expression", "Pointe levée = pas de transposition, orteil enfoncé = intervalle complet du programme"],
+             ["2", "Sélecteur de programmes", "21 programmes : WHAMMY, DETUNE et HARMONY"],
+             ["3", "Écran", "Famille et moteur, programme, décalage en direct, course de la pédale ; clic = presets"],
+             ["4", "Inverseur CLASSIC / CHORDS", "Moteur notes seules ou accords"],
+             ["5", "GLIDE", "Lissage du mouvement de la pédale (0 à 250 ms)"],
+             ["6", "TONE", "Filtre de la voix transposée (plus sombre vers la gauche)"],
+             ["7", "MIX", "Dosage entre le son direct et le son transposé"],
+             ["8", "Barre de presets", "Flèches : programme précédent / suivant ; clic au centre = menu ; affiche aussi les valeurs pendant un réglage"],
+             ["9", "Footswitch", "Effet ON / OFF ; l'anneau rouge s'allume quand l'effet est actif"],
+             ["10", "IN", "Entrée (tranche droite)"],
+             ["11", "OUT", "Sortie (tranche gauche)"]], [11 * mm, 44 * mm, CW - 55 * mm])]
+
+S += [PageBreak(), P("Les commandes", "h1"),
+      P("La pédale d'expression", "h2"),
+      P("Glissez verticalement sur le plateau (vers le bas = appuyer sur la pointe), utilisez la molette, ou double-cliquez pour passer d'un bout à l'autre. "
+        "Le paramètre <b>Expression Pedal</b> est automatisable dans le DAW. Le plateau bascule en perspective avec sa lumière et son ombre : "
+        "il suit en temps réel la pédale MIDI et les automations."),
+      img(updown, CW * 0.78),
+      P("Pointe levée (à gauche) et orteil enfoncé (à droite).", "small"),
+      P("Le sélecteur de programmes", "h2"),
+      P("Glissez verticalement, utilisez la molette ou cliquez sur l'écran pour choisir parmi les 21 programmes. Les repères autour du bouton regroupent "
+        "les familles : <b>WHAMMY</b> (début de course), <b>DETUNE</b> (en haut) et <b>HARMONY</b> (fin de course). Tourner le sélecteur quitte le preset usine en cours."),
+      P("L'inverseur CLASSIC / CHORDS", "h2"),
+      P("<b>CLASSIC</b> : moteur qui suit la note jouée, très réactif, idéal pour les solos et les cris de la Whammy. "
+        "<b>CHORDS</b> : moteur polyphonique pour les accords, sans latence. Un clic sur l'inverseur bascule de l'un à l'autre ; le curseur glisse dans sa fenêtre."),
+      P("GLIDE, TONE, MIX", "h2")] + bullets([
+        "<b>GLIDE</b> (0 à 250 ms) : lisse les mouvements de la pédale ; court pour des effets francs, long pour des montées douces.",
+        "<b>TONE</b> : adoucit la voix transposée (utile sur les octaves hautes).",
+        "<b>MIX</b> : à 100 %, seul le son transposé sort (comme la Whammy en mode Whammy) ; plus bas, le son direct est conservé."]) + [
+      P("Ces potards se règlent en glissant verticalement (Maj = réglage fin), à la molette, et reviennent à leur valeur par défaut d'un double-clic. "
+        "Leur index tourne avec un léger flou de mouvement.", "small"),
+      P("Footswitch", "h2"),
+      P("Un clic active ou coupe l'effet. Quand l'effet est actif, l'anneau rouge dans la gorge du footswitch est allumé ; son halo se règle avec <b>Glow</b>. "
+        "Coupé, l'écran s'assombrit et indique BYPASS."),
+      P("Écran et barre de presets", "h2"),
+      P("L'écran affiche la famille et le moteur (ex. WHAMMY · CLASSIC), le nom du programme, le décalage en cours (demi-tons, ou cents en Detune), "
+        "une jauge de la course de la pédale et le numéro du programme. La barre de presets montre le programme ou le preset usine chargé : "
+        "les flèches passent au programme précédent ou suivant, un clic au centre ouvre le menu des presets. Pendant un réglage, la même barre affiche "
+        "les valeurs en direct (GLIDE, TONE, MIX, MIDI Learn, calibration), puis la barre de presets revient en fondu.")]
+
+S += [PageBreak(), P("Les 21 programmes", "h1"),
+      P("Ordre du sélecteur, identique aux Program Change MIDI 1 à 21. Pour Whammy, la colonne « orteil enfoncé » donne l'intervalle atteint au bout de la course ; "
+        "pour Harmony, la voix ajoutée passe du premier intervalle (pointe levée) au second (orteil enfoncé) ; pour Detune, la pédale dose la voix désaccordée."),
+      table([["N°", "Famille", "Programme", "Pointe levée", "Orteil enfoncé"]] +
+            [[str(i + 1), f, n, u, d] for i, (f, n, u, d) in enumerate(PROGRAMS)],
+            [11 * mm, 25 * mm, 45 * mm, 33 * mm, CW - 114 * mm])]
+
+S += [PageBreak(), P("MIDI et pédale d'expression", "h1"),
+      P("MIDI Learn", "h2"),
+      P("Aucun contrôleur n'est assigné par défaut. Clic droit sur une commande (plateau, sélecteur, potard, inverseur, footswitch) > <b>MIDI Learn</b>, "
+        "puis bougez la commande de votre pédalier : la barre d'état confirme l'assignation (ex. « Expression pedal = CC 11 »). "
+        "<b>Clear MIDI</b> retire l'assignation. L'inverseur et le footswitch peuvent aussi apprendre une note MIDI. "
+        "Les assignations sont enregistrées avec le projet. Le sous-menu <b>MIDI</b> du clic droit principal les regroupe toutes."),
+      P("Pédale d'expression MIDI", "h2")] + bullets([
+        "<b>Invert pedal direction</b> (coché par défaut) : inverse le sens de la pédale MIDI.",
+        "Plage apprise automatiquement : Wharry retient la plage réellement envoyée par la pédale (par ex. 2 à 116) et l'étale sur toute la course.",
+        "<b>Calibrate pedal</b> : enfoncez la pédale à fond puis relevez-la ; la calibration se termine seule (ou d'un clic sur l'écran). <b>Reset pedal calibration</b> revient à la plage automatique."]) + [
+      P("Program Change (carte Whammy 5)", "h2"),
+      table([["Program Change", "Effet"], ["1 à 21", "Programme 1 à 21, CLASSIC, effet actif"], ["22 à 42", "Programme 1 à 21, CLASSIC, bypass"],
+             ["43 à 63", "Programme 1 à 21, CHORDS, effet actif"], ["64 à 84", "Programme 1 à 21, CHORDS, bypass"]], [45 * mm, CW - 45 * mm]),
+      P("Option du clic droit : <b>Respond to MIDI program change</b> (activée par défaut).", "small"),
+      P("Fenêtre et menus", "h1")] + bullets([
+        "La fenêtre s'ouvre à la taille « 60 % » et ne peut pas être plus petite ; clic droit > <b>Plugin size</b> : 60 % (default), 75 %, 100 %. "
+        "<b>Default size (new windows)</b> choisit la taille d'ouverture de toutes les nouvelles fenêtres.",
+        "Clic droit > <b>Glow (halo of the lights)</b> : 25, 50, 75 ou 100 % (par défaut) ; dose seulement le halo de l'anneau du footswitch, commun à toutes les fenêtres.",
+        "Clic droit > <b>Chords engine</b> : <b>Live engine</b> (sans latence) ou <b>Studio HQ engine</b> (plus précis sur les accords, latence d'environ 170 ms annoncée au DAW qui la compense à la lecture).",
+        "Les menus s'ouvrent à l'endroit du clic ; le clic droit sur une commande commence par son MIDI Learn."])
+
+S += [PageBreak(), P("Presets usine", "h1"),
+      P("Menu des presets : clic sur l'écran ou au centre de la barre de presets. Les 14 presets usine NINE HANDS | DSP réglent programme, moteur, GLIDE, TONE et MIX ; "
+        "les 21 programmes de la Whammy sont listés en dessous."),
+      table([["Preset", "Programme", "Moteur", "Glide", "Tone", "Mix", "Description"]] +
+            [[n, p, m, "%d ms" % g, "%d %%" % t, "%d %%" % x, d] for n, p, m, g, t, x, d in FACTORY],
+            [36 * mm, 22 * mm, 16 * mm, 14 * mm, 12 * mm, 12 * mm, CW - 112 * mm]),
+      P("Conseils d'utilisation", "h1")] + bullets([
+        "Placez Wharry en tête de chaîne, avant la distorsion et l'ampli simulé : la transposition suit mieux un signal propre, et la saturation après donne le cri typique.",
+        "7 cordes ou accordages graves : le suivi descend jusqu'à ~35 Hz ; en CLASSIC, jouez des notes seules bien attaquées.",
+        "Accords : passez en CHORDS ; pour un rendu de studio (re-amping, mixage), choisissez le moteur Studio HQ.",
+        "Pour un effet « capodastre » fixe, laissez la pédale enfoncée et automatisez-la ; pour des bends expressifs, réglez GLIDE entre 15 et 40 ms.",
+        "Pédale MIDI qui n'atteint pas 0 ou 127 : un aller-retour complet suffit, la plage est apprise automatiquement."])
+
+S += [PageBreak(), P("Caractéristiques techniques", "h1"),
+      table([["Caractéristique", "Valeur"],
+             ["Formats", "VST3 (Windows 64 bits, macOS universel Intel + Apple Silicon), Audio Unit sur macOS"],
+             ["Nom dans le DAW", "Wharry (NINE HANDS | DSP)"],
+             ["Programmes", "21 (10 Whammy, 2 Detune, 9 Harmony) + 14 presets usine"],
+             ["Moteurs", "CLASSIC (notes seules), CHORDS Live (sans latence), CHORDS Studio HQ (vocodeur de phase, ~170 ms)"],
+             ["Plage de transposition", "-36 à +24 demi-tons ; Detune 10 et 25 cents"],
+             ["Suivi des notes", "~35 Hz à 1500 Hz"],
+             ["GLIDE", "0 à 250 ms (30 ms par défaut)"],
+             ["MIDI", "MIDI Learn de toutes les commandes (CC ou note), Program Change carte Whammy 5"],
+             ["Fenêtre", "60 % (par défaut et minimum), 75 %, 100 %, redimensionnable"],
+             ["Version", VERSION]], [45 * mm, CW - 45 * mm])]
+
+doc.build(S)
 print(OUT)
