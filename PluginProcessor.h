@@ -51,6 +51,7 @@ public:
     void loadFactory (int index);
     int  getCurrentFactory() const { return currentFactory; }
     int  getActiveFactory() const { return activeFactory.load(); }   // preset usine chargé et non modifié depuis (-1 sinon)
+    void clearActiveFactory() { activeFactory = -1; }               // le sélecteur a été tourné à la main
     void setParamValue (const juce::String& id, float plainValue);
     void togglePedalSwitch (const juce::String& id);
 
