@@ -32,6 +32,10 @@ int main (int argc, char** argv)
     shot ("wharry_100pc_milieu", 0.55f, 15, true, true);
     shot ("wharry_100pc_basse", 1.0f, 1, false, true);
     shot ("wharry_100pc_bypass", 1.0f, 9, false, false);
+    ed->setSize (1213, 1120);                        // grande capture (couverture de la notice)
+    shot ("wharry_big_basse", 1.0f, 1, false, true);
+    shot ("wharry_big_haute", 0.0f, 1, false, true);
+    static_cast<WharryEditor*> (ed.get())->setScaleIndex (2);
     proc.loadFactory (4);
     {
         proc.setParamValue ("pedal", 0.35f);
