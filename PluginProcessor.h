@@ -99,6 +99,7 @@ public:
     juce::uint32 msSincePedalMove() const { return juce::Time::getMillisecondCounter() - lastMoveMs.load(); }
     juce::String calibrationDescription() const;
 
+    std::atomic<bool> midiFsLatching { false };   // footswitch ON / OFF par CC : true = latching (127 on / 0 off), false = bascule a chaque appui
     std::atomic<int> uiScaleIdx { -1 };    // -1 = rien de choisi (taille par défaut des nouvelles fenêtres), 0 = 60 %, 1 = 75 %, 2 = 100 %
 
     juce::AudioProcessorValueTreeState apvts;

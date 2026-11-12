@@ -281,7 +281,12 @@ void WharryProcessor::handleMidiMessage (const MidiMessage& m)
         // anti-gel v2 : bascule mise en file (valeur en file si elle existe, sinon valeur courante)
         auto toggle = [this] (int qi) { setParamFromAudio (qi, queuedOrCurrent (qi) > 0.5f ? 0.0f : 1.0f); };
         if (c == ccMap[lChords].load (std::memory_order_relaxed)) { if (on && ! leftHeld.load())  toggle (1); leftHeld = on; }
-        if (c == ccMap[lFs].load (std::memory_order_relaxed))     { if (on && ! rightHeld.load()) toggle (2); rightHeld = on; }
+        if (c == ccMap[lFs].load (std::memory_order_relaxed))
+        {
+            if (midiFsLatching.load (std::memory_order_relaxed)) setParamFromAudio (2, on ? 1.0f : 0.0f);   // latching : 127 = on, 0 = off
+            else if (on && ! rightHeld.load()) toggle (2);
+            rightHeld = on;
+        }
     }
     else if (m.isNoteOn())
     {
@@ -442,6 +447,7 @@ void WharryProcessor::getStateInformation (MemoryBlock& dest)
         st.setProperty (String ("cc_") + learnDef (i).id, ccMap[i].load(), nullptr);
     st.setProperty ("noteRight", noteRight.load(), nullptr);
     st.setProperty ("uiScaleIdx", uiScaleIdx.load(), nullptr);
+    st.setProperty ("midiFsLatching", midiFsLatching.load(), nullptr);
     st.setProperty ("factory", currentFactory, nullptr);
     st.setProperty ("autoMin", (double) autoMin.load(), nullptr);
     st.setProperty ("autoMax", (double) autoMax.load(), nullptr);
@@ -476,6 +482,7 @@ void WharryProcessor::setStateInformation (const void* data, int size)
                     for (int i = 0; i < numLearn; ++i) ccMap[i].store (-1);
             }
             uiScaleIdx = jlimit (-1, 2, (int) st.getProperty ("uiScaleIdx", -1));
+            midiFsLatching = (bool) st.getProperty ("midiFsLatching", false);
             currentFactory = jlimit (0, kNumFactory - 1, (int) st.getProperty ("factory", 0));
             autoMin = (float) (double) st.getProperty ("autoMin", 1.0);
             autoMax = (float) (double) st.getProperty ("autoMax", 0.0);

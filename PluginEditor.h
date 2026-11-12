@@ -1,5 +1,6 @@
 #pragma once
 #include "PluginProcessor.h"
+#include "NineHandsWindow.h"
 
 class PedalView;
 
@@ -15,6 +16,8 @@ public:
     int  getScaleIndex() const;          // 0, 1, 2 = 60 % (défaut d'origine), 75 %, 100 %  (-1 = taille libre)
     void setScaleIndex (int idx);        // choisit la taille de cette instance (sauvegardée avec le projet)
     void applyScale (int idx);           // redimensionne seulement (0 = 60 %, aussi la taille minimale)
+    juce::PopupMenu buildContextMenu (int learnIdx = -1);   // menu clic droit (aussi pour l'outil de contrôle des menus)
+    NineHandsWindow::HostLock hostLock;  // fenêtre du DAW : jamais sous 60 %, jamais au-delà de 150 %
 
 private:
     friend class PedalView;              // son timer surveille le moteur de rendu (anti-gel v2)

@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "NineHandsUserPresets.h"
 #include <BinaryData.h>
 #include "WigaWindowSize.h"
 #include "NineHandsGlow.h"
@@ -905,83 +906,116 @@ private:
         else if (r == 1201) proc.resetMidiMap();
     }
 
-    void showMenu (Point<float> p)
+public:
+    PopupMenu buildMenu (int learnIdx)
     {
         auto* ed = findParentComponentOfClass<WharryEditor>();
         PopupMenu m;
         m.setLookAndFeel (&menuLnf);
-        const int learnIdx = learnIndexAt (p);
+        const int lt = proc.learnTarget.load();
+        auto assign = [this] (int i) { const auto a = proc.learnAssignText (i); return a == "none" ? String ("not assigned") : a; };
         if (learnIdx >= 0)
         {
+            // menu d'une commande (tronc commun) : en-tête, MIDI Learn, Clear MIDI, Cancel MIDI learn
             const String name = WharryProcessor::learnDef (learnIdx).name;
             const int ico = learnIdx == WharryProcessor::lChords ? NineHandsMenu::icoSwitch
                           : learnIdx == WharryProcessor::lFs ? NineHandsMenu::icoLatch
                           : learnIdx == WharryProcessor::lPedal ? NineHandsMenu::icoPedal : NineHandsMenu::icoKnob;
             NineHandsMenu::addHeader (m, menuLnf.f, ico, kAccent, name, midiSub (learnIdx));
-            const int lt = proc.learnTarget.load();
             m.addItem (1000 + learnIdx, "MIDI Learn: " + name, true, lt == learnIdx);
             m.addItem (1100 + learnIdx, "Clear MIDI: " + name, proc.learnAssignText (learnIdx) != "none");
-            if (lt >= 0) m.addItem (1200, "Cancel MIDI learn");
-            m.addSeparator();
+            m.addItem (1200, "Cancel MIDI learn", lt >= 0);
+            return m;
         }
-        else
-            NineHandsMenu::addHeader (m, menuLnf.f, NineHandsMenu::icoPedal, kAccent, "Wharry", "Pitch shift  v" + String (JucePlugin_VersionString));
 
-        const bool onFs = learnIdx == WharryProcessor::lFs, onToggle = learnIdx == WharryProcessor::lChords;
-        if (! (onFs || onToggle))
-        {
-            m.addSectionHeader ("Expression pedal");
-            if (learnIdx != WharryProcessor::lPedal)
-            {
-                m.addItem (31, "MIDI Learn: expression pedal (" + proc.learnAssignText (WharryProcessor::lPedal) + ")");
-                m.addItem (32, "Clear MIDI: expression pedal", proc.learnAssignText (WharryProcessor::lPedal) != "none");
-            }
-            m.addItem (33, "Invert pedal direction", true, param ("invert"));
-            m.addItem (35, proc.isCalibrating() ? "Finish pedal calibration" : "Calibrate pedal (" + proc.calibrationDescription() + ")");
-            m.addItem (34, "Reset pedal calibration");
-            m.addSectionHeader ("Chords engine");
-            m.addItem (51, "Live engine (no latency)", true, ! param ("studio"));
-            m.addItem (52, "Studio HQ engine (latency, re-amping / mixing)", true, param ("studio"));
-            m.addItem (53, "Respond to MIDI program change", true, param ("pc"));
-            if (learnIdx < 0) { m.addSeparator(); addMidiSubmenu (m); }
-        }
-        m.addSectionHeader ("Plugin size");
-        addSizeItems (m, ed);
-        PopupMenu glowMenu;
-        for (int i = 0; i < 4; ++i)
-        {
-            const int v = 25 * (i + 1);
-            glowMenu.addItem (700 + v, "Glow " + String (v) + " %" + (v == 100 ? "  (default)" : ""), true, glow == v);
-        }
-        m.addSubMenu ("Glow (halo of the lights)", glowMenu);
+        NineHandsMenu::addHeader (m, menuLnf.f, NineHandsMenu::icoPedal, kAccent, "Wharry", "Pitch shift  v" + String (JucePlugin_VersionString));
+        PopupMenu factory;
+        const int cur = currentProgram(), af = proc.getActiveFactory();
+        factory.addSectionHeader ("NINE HANDS | DSP factory presets");
+        for (int i = 0; i < WharryProcessor::kNumFactory; ++i) factory.addItem (101 + i, String (i + 1) + ". " + WharryProcessor::factory (i).name, true, i == af && userSlot == 0);
+        factory.addSectionHeader ("Whammy programs");
+        for (int i = 0; i < wharry::kNumPrograms; ++i)
+            factory.addItem (1 + i, String (i + 1) + "  " + wharry::program (i).name, true, i == cur && af < 0 && userSlot == 0);
+        m.addSubMenu ("Factory presets", factory);
+        NineHandsUserPresets::addMenus (m, "Wharry", 200, 300, userSlot);
         m.addSeparator();
-        m.addItem (999, "Wharry  v" + String (JucePlugin_VersionString) + "  -  NINE HANDS | DSP", false);
 
+        PopupMenu engine;
+        engine.addItem (51, "Live engine (no latency)", true, ! param ("studio"));
+        engine.addItem (52, "Studio HQ engine (latency, re-amping / mixing)", true, param ("studio"));
+        m.addSubMenu ("Engine", engine);
+        m.addSeparator();
+
+        PopupMenu midi;
+        midi.addSectionHeader ("MIDI Learn");
+        for (int i = 0; i < WharryProcessor::numLearn; ++i)
+            midi.addItem (1000 + i, String ("Learn: ") + WharryProcessor::learnDef (i).name + "  (" + assign (i) + ")", true, lt == i);
+        midi.addSeparator();
+        midi.addItem (1200, "Cancel MIDI learn", lt >= 0);
+        midi.addItem (1201, "Clear all MIDI assignments");
+        midi.addSeparator();
+        NineHandsWindow::addMidiFootswitchMode (midi, proc.midiFsLatching.load());
+        midi.addSeparator();
+        midi.addSectionHeader ("Expression pedal");
+        midi.addItem (35, proc.isCalibrating() ? "Finish pedal calibration" : "Calibrate pedal (" + proc.calibrationDescription() + ")");
+        midi.addItem (33, "Invert pedal direction", true, param ("invert"));
+        midi.addItem (34, "Reset pedal calibration");
+        midi.addItem (53, "Respond to MIDI program change", true, param ("pc"));
+        midi.addSeparator();
+        NineHandsWindow::addProgramChangeInfo (midi);
+        m.addSubMenu ("MIDI", midi);
+        m.addSeparator();
+
+        const char* names[kNumSizes] = { "60 %", "75 %", "100 %" };
+        int heights[kNumSizes];
+        for (int i = 0; i < kNumSizes; ++i) heights[i] = (int) std::lround (kRefH * kScales[i]);
+        m.addSubMenu ("Plugin size", NineHandsWindow::sizeMenu (JucePlugin_Name, kNumSizes, names, heights, ed != nullptr ? ed->getHeight() : 0));
+        m.addSubMenu ("Glow intensity", NineHandsWindow::glowMenu (glow));
+        return m;
+    }
+private:
+    int userSlot = 0;                      // preset utilisateur charge (1..9), 0 = aucun
+
+    void showMenu (Point<float> p)
+    {
+        auto m = buildMenu (learnIndexAt (p));
         Component::SafePointer<PedalView> sp (this);
         m.showMenuAsync (PopupMenu::Options().withMousePosition(), [sp] (int res)
         {
-            if (sp == nullptr || res <= 0) return;
+            if (sp == nullptr || res <= 0 || res == 9001) return;
             auto& pr = sp->proc;
-            if (res >= 1000) { sp->handleLearnChoice (res); return; }
-            if (res >= 725 && res <= 800)
+            if (auto* ed = sp->findParentComponentOfClass<WharryEditor>())
             {
-                sp->glow = res - 700;
-                NineHandsGlow::setPercent (JucePlugin_Name, sp->glow);
-                sp->flashMessage ("Glow  " + String (sp->glow) + " %");
+                int inst = pr.uiScaleIdx.load();
+                const int sz = NineHandsWindow::handleSize (res, JucePlugin_Name, kNumSizes, inst);
+                if (sz >= 0) { pr.uiScaleIdx = inst; ed->applyScale (sz); return; }
+            }
+            if (const int pc = NineHandsWindow::handleGlow (res, JucePlugin_Name))
+            {
+                sp->glow = pc;
+                sp->flashMessage ("Glow  " + String (pc) + " %");
                 sp->askRepaint (sp->fsArea());
                 return;
             }
+            if (res >= 1000) { sp->handleLearnChoice (res); return; }
+            if (res >= 101 && res < 101 + WharryProcessor::kNumFactory) { pr.loadFactory (res - 101); sp->userSlot = 0; return; }
+            if (res >= 1 && res <= wharry::kNumPrograms) { pr.selectWhammyProgram (res - 1); sp->userSlot = 0; return; }
+            if (res > 200 && res < 210) { if (NineHandsUserPresets::load (pr, "Wharry", res - 200)) { sp->userSlot = res - 200; sp->flashMessage ("User " + String (sp->userSlot)); } return; }
+            if (res > 300 && res < 310)
+            {
+                if (NineHandsUserPresets::save (pr, "Wharry", res - 300, { "heel", "toe", "invert", "pc", "studio" })) { sp->userSlot = res - 300; sp->flashMessage ("Saved  User " + String (sp->userSlot)); }
+                return;
+            }
+            if (res == NineHandsWindow::idLatch || res == NineHandsWindow::idMomentary) { pr.midiFsLatching = res == NineHandsWindow::idLatch; return; }
             switch (res)
             {
-                case 31: pr.startMidiLearn (MidiTarget::Pedal); break;
-                case 32: pr.clearMidi (MidiTarget::Pedal); break;
                 case 33: pr.togglePedalSwitch ("invert"); break;
                 case 34: pr.resetCalibration(); break;
                 case 35: if (pr.isCalibrating()) pr.finishCalibration(); else pr.startCalibration(); break;
                 case 51: pr.setParamValue ("studio", 0.0f); break;
                 case 52: pr.setParamValue ("studio", 1.0f); break;
                 case 53: pr.togglePedalSwitch ("pc"); break;
-                default: handleSizeChoice (res, sp->findParentComponentOfClass<WharryEditor>()); break;
+                default: break;
             }
         });
     }
@@ -1022,13 +1056,12 @@ WharryEditor::WharryEditor (WharryProcessor& p) : AudioProcessorEditor (&p), pro
     addAndMakeVisible (*view);
     setResizable (true, true);
     const int minH = (int) std::lround (kRefH * kDefaultScale);          // jamais plus petit que la taille par défaut
-    const int maxH = 1120;
+    const int maxH = 1115;                                               // 150 %
     setResizeLimits ((int) std::lround ((double) minH * kW / kH), minH, (int) std::lround ((double) maxH * kW / kH), maxH);
+    hostLock.setLimits ((int) std::lround ((double) minH * kW / kH), minH, (int) std::lround ((double) maxH * kW / kH), maxH);
     getConstrainer()->setFixedAspectRatio ((double) kW / (double) kH);
     setOpaque (true);
-    const int saved = jlimit (-1, 2, proc.uiScaleIdx.load());
-    if (saved >= 0) setScaleIndex (saved);
-    else            applyScale (WigaWindowSize::defaultIndex (JucePlugin_Name, kNumSizes));
+    applyScale (NineHandsWindow::openIndex (JucePlugin_Name, proc.uiScaleIdx.load(), kNumSizes));
     view->initCaches();
 }
 
@@ -1063,6 +1096,7 @@ void WharryEditor::checkRenderer()
 {
     if ((void*) getPeer() != lastPeer || Time::getMillisecondCounterHiRes() - lastRendererCheckMs > 1000.0)
         useSoftwareRenderer();
+    hostLock.track (*this);
 }
 
 void WharryEditor::resetRenderer()
@@ -1073,7 +1107,7 @@ void WharryEditor::resetRenderer()
 }
 
 void WharryEditor::paint (Graphics& g) { g.fillAll (Colour (0xff0d0e10)); }
-void WharryEditor::parentHierarchyChanged() { useSoftwareRenderer(); }
+void WharryEditor::parentHierarchyChanged() { useSoftwareRenderer(); hostLock.track (*this); }
 void WharryEditor::visibilityChanged()      { useSoftwareRenderer(); if (isShowing()) repaint(); }
 
 void WharryEditor::resized()
@@ -1100,4 +1134,7 @@ void WharryEditor::applyScale (int idx)
     const float sc = kScales[jlimit (0, kNumSizes - 1, idx)];
     const int h = jmax ((int) std::lround (kRefH * kDefaultScale), (int) std::lround (kRefH * sc));
     setSize ((int) std::lround ((double) h * kW / kH), h);
+    hostLock.enforce();
 }
+
+juce::PopupMenu WharryEditor::buildContextMenu (int learnIdx) { return view->buildMenu (learnIdx); }
